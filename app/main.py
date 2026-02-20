@@ -1,5 +1,18 @@
-from flask import Flask
+from app.core.analyzer import analyze_text
+from app.core.metrics import tononi_complexity, free_energy
 
-app = Flask(__name__)
+text = input("Введи текст: ")
 
-# Additional package-level variables or imports can be added here.
+profile = analyze_text(text)
+data = profile.to_dict()
+
+print("\nПсихологічний профіль:")
+for k, v in data.items():
+    print(k, "=>", v)
+
+consciousness = tononi_complexity(data["big_five"])
+energy = free_energy(data["big_five"])
+
+print("\nМетрики:")
+print("Tononi complexity:", consciousness)
+print("Free energy:", energy)

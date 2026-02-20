@@ -1,1 +1,7 @@
-# This file is intentionally left blank.
+MASLOW = {
+    "physiological": ["їжа", "сон", "втома"],
+    "safety": ["безпека", "стабільність", "гроші"],
+    "love": ["кохання", "друзі", "підтримка"],
+    "esteem": ["повага", "успіх", "статус"],
+    "self_actualization": ["сенс", "розвиток", "покликання"]
+}

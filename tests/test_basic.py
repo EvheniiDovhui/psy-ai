@@ -1,5 +1,6 @@
-from flask import Flask
+from app.core.analyzer import analyze_text
 
-app = Flask(__name__)
-
-# Additional package-level variables or imports can be added here.
+def test_analysis():
+    text = "Мені тривожно, але я хочу розвитку і сенсу"
+    profile = analyze_text(text)
+    assert profile.big_five["openness"] >= 0

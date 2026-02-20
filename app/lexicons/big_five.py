@@ -1,1 +1,7 @@
-# This file is intentionally left blank.
+BIG_FIVE = {
+    "neuroticism": ["тривога", "страх", "паніка", "хвилююсь"],
+    "openness": ["розвиток", "ідея", "сенс", "нове"],
+    "conscientiousness": ["план", "відповідальність", "ціль"],
+    "extraversion": ["друзі", "люди", "спілкування"],
+    "agreeableness": ["допомога", "довіра", "повага"]
+}

@@ -1,1 +1,8 @@
-# This file is intentionally left blank.
+SCHWARTZ = {
+    "power": ["влада", "контроль"],
+    "achievement": ["досягти", "перемога"],
+    "hedonism": ["задоволення", "кайф"],
+    "security": ["безпека", "порядок"],
+    "benevolence": ["доброта", "допомога"],
+    "universalism": ["світ", "людство", "справедливість"]
+}
