@@ -5,7 +5,7 @@
 ## Запуск
 
 ```bash
-python -m app.main
+python3 -m app.main
 ```
 
 ## Структура
