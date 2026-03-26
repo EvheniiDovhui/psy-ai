@@ -9,7 +9,7 @@ import json
 # 🌟 ІМПОРТУЄМО ТВОЇ МОДУЛІ
 # Додаємо наш новий AI-аналізатор з Gemini
 try:
-    from app.core.ai_analyzer import analyze_text_with_gemini
+    from app.core.ai_analyzer import analyze_text_with_gemini, analyze_interview_with_gemini
     from app.core.metrics import tononi_complexity, free_energy
 except ImportError as e:
     print(f"❌ Помилка імпорту! Перевір, чи створено файл app/core/ai_analyzer.py. Error: {e}")
