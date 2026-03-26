@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.psychometrics.types 
+from app.psychometrics.types import Impact
 
 
 #Big Five
