@@ -1,0 +1,44 @@
+name: CI Pipeline (Psychometrics)
+
+# Коли запускати цей скрипт?
+on:
+  push:
+    branches: [ "main", "dev" ] # При кожному збереженні в ці гілки
+  pull_request:
+    branches: [ "main", "dev" ] # Коли хтось пропонує злити свій код
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest # Беремо віртуальний сервер на Linux
+
+    steps:
+    - name: 📥 Завантаження коду
+      uses: actions/checkout@v4
+      # Цей крок каже GitHub: "Скопіюй код проєкту на цей віртуальний сервер"
+
+    - name: 🐍 Встановлення Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10' # Вкажи версію, на якій ви пишете (напр. 3.9, 3.10 або 3.11)
+
+    - name: 📦 Встановлення залежностей
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest
+        # Якщо у вас є файл з бібліотеками (requirements.txt), встановлюємо їх:
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: 🔍 Перевірка коду (Linting)
+      run: |
+        # flake8 шукає синтаксичні помилки, неіснуючі змінні тощо. 
+        # Якщо вони є — пайплайн впаде з помилкою (червоний хрестик у GitHub)
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        
+        # Це перевірка на красу коду (зайві пробіли тощо). 
+        # exit-zero означає, що тут він просто покаже попередження, але не забракує код.
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: 🧪 Запуск автотестів (QA Automation)
+      run: |
+        # Запускаємо всі тести, які знайдуться в проєкті
+        pytest
