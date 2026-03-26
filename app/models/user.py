@@ -2,9 +2,10 @@ from app.db.db_connect import DBConnect
 import sqlite3
 
 class User:
-    def __init__(self, username, password_hash):
+    def __init__(self, username, password_hash, age):
         self.username = username
         self.password_hash = password_hash
+        self.age = self.age
 
         self._save_data()
 
@@ -13,9 +14,9 @@ class User:
 
         try:
             conn.cursor.execute("""
-                INSERT INTO users (username, passwordHash)
-                VALUES (?, ?)
-            """, (self.username, self.password_hash))
+                INSERT INTO users (username, passwordHash, age)
+                VALUES (?, ?, ?)
+            """, (self.username, self.password_hash, self.age))
 
             conn.connecting.commit()
 
