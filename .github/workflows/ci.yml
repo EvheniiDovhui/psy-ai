@@ -41,4 +41,4 @@ jobs:
     - name: 🧪 Запуск автотестів (QA Automation)
       run: |
         # Запускаємо всі тести, які знайдуться в проєкті
-        pytest
+        PYTHONPATH=. pytest
