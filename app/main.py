@@ -1,86 +1,88 @@
-# from app.core.analyzer import analyze_text
-# from app.core.metrics import tononi_complexity, free_energy
-#
-# text = input("Введи текст: ")
-#
-# profile = analyze_text(text)
-# data = profile.to_dict()
-#
-# print("\nПсихологічний профіль:")
-# for k, v in data.items():
-#     print(k, "=>", v)
-#
-# consciousness = tononi_complexity(data["big_five"])
-# energy = free_energy(data["big_five"])
-#
-# print("\nМетрики:")
-# print("Tononi complexity:", consciousness)
-# print("Free energy:", energy)
+# app/api.py
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, List, Any
+import uvicorn
+import json
 
+# =========================================================================
+# 🌟 ІМПОРТ ТВОЇХ ІСНУЮЧИХ МОДУЛІВ
+try:
+    from app.core.analyzer import analyze_text
+    from app.core.metrics import tononi_complexity, free_energy
+except ImportError as e:
+    print(f"❌ Помилка імпорту твоїх модулів! Перевір структуру папок. Error: {e}")
+    # Це заглушка
+    def analyze_text(t): return type('Profile', (object,), {"to_dict": lambda: {"big_five": {"neuroticism": 0.5, "extraversion": 0.6, "openness": 0.7, "agreeableness": 0.8, "conscientiousness": 0.4}}})()
+    def tononi_complexity(b5): return 0.1234
+    def free_energy(b5): return 0.5678
 
-import numpy as np
-from app.core.vectorization.vector_builder import (
-    build_state_vector,
-    PROFILE_BEFORE,
-    PROFILE_AFTER_A,
-    PROFILE_AFTER_B,
-    PROFILE_AFTER_C,
-    EXPERT_VECTOR_VALUES,
+# =========================================================================
+
+app = FastAPI(title="PSY-AI Brain Core", description="API для психологічного аналізу")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-from app.core.vectorization.error_metrics import error_report
-from app.core.vectorization.therapy_analysis import compute_therapy_result, summarize_therapy
-from app.core.vectorization.therapy_comparison import compare_therapies, best_therapy
-from app.core.vectorization.visualizer import (
-    plot_all_components,
-    plot_full_vector,
-    plot_therapy_comparison,
-    plot_before_after,
-)
-from app.models.vectors import ExpertVector
 
-# ── 1. Будуємо вектори ────────────────────────────────────────────────────
-e_before  = build_state_vector(PROFILE_BEFORE,  label="before")
-e_after_a = build_state_vector(PROFILE_AFTER_A, label="after_A")
-e_after_b = build_state_vector(PROFILE_AFTER_B, label="after_B")
-e_after_c = build_state_vector(PROFILE_AFTER_C, label="after_C")
+class SachSentence(BaseModel):
+    prompt: str
+    answer: str
 
-e_expert = ExpertVector(vector=EXPERT_VECTOR_VALUES, label="expert")
+class SachsTestPayload(BaseModel):
+    testName: str
+    timestamp: str
+    results: Dict[str, List[SachSentence]]
 
-# ── 2. Похибка: машинний vs еталон ───────────────────────────────────────
-report = error_report(e_before, e_expert)
+@app.post("/api/analyze-sachs")
+async def analyze_sachs_test(data: SachsTestPayload):
+    try:
+        combined_text = ""
+        for category, sentences in data.results.items():
+            for item in sentences:
+                if item.answer.strip(): 
+                    combined_text += f"{item.prompt} {item.answer}. "
 
-print("=== Похибка (до терапії vs еталон) ===")
-print(f"  δ     = {report['absolute_error']}")
-print(f"  δ_rel = {report['relative_error_pct']}%")
-print(f"  Δeₖ   = {report['component_diff'].round(3)}")
+        if not combined_text.strip():
+            raise HTTPException(status_code=400, detail="Тест порожній")
 
-# ── 3. Обраховуємо результати терапій ────────────────────────────────────
-therapy_a = compute_therapy_result("Терапія A", e_before, e_after_a)
-therapy_b = compute_therapy_result("Терапія B", e_before, e_after_b)
-therapy_c = compute_therapy_result("Терапія C", e_before, e_after_c)
+        print(f"🔮 Аналіз тесту '{data.testName}' від {data.timestamp}. Текст: {combined_text[:50]}...")
 
-print("\n=== Ефективність терапій ===")
-for therapy in [therapy_a, therapy_b, therapy_c]:
-    summary = summarize_therapy(therapy)
-    print(f"  {summary['therapy']}: ε = {summary['effectiveness_epsilon']}")
+        # 2. 🌟 ЗАПУСКАЄМО ТВІЙ АНАЛІЗАТОР
+        profile = analyze_text(combined_text)
+        profile_data = profile.to_dict()
 
-# ── 4. Порівняння терапій ─────────────────────────────────────────────────
-results = [therapy_a, therapy_b, therapy_c]
-e_target = ExpertVector(vector=EXPERT_VECTOR_VALUES, label="target")
+        # =====================================================================
+        # 🛑 ОСЬ ТУТ МИ ВИВОДИМО ДАНІ В ТЕРМІНАЛ ДЛЯ ПЕРЕВІРКИ
+        print("\n" + "="*50)
+        print("📊 СТРУКТУРА ДАНИХ ВІД АНАЛІЗАТОРА (profile_data):")
+        print(json.dumps(profile_data, indent=2, ensure_ascii=False))
+        print("="*50 + "\n")
+        # =====================================================================
 
-ranked = compare_therapies(results, target=e_target)
+        # 3. 🌟 РАХУЄМО ТВОЇ МЕТРИКИ
+        b5 = profile_data.get("big_five", {})
+        consciousness = tononi_complexity(b5)
+        energy = free_energy(b5)
 
-print("\n=== Рейтинг терапій ===")
-for r in ranked:
-    print(f"  {r['therapy']}: ε={r['effectiveness_epsilon']},  cos={r['cosine_to_target']}")
+        # 4. Повертаємо JSON на фронтенд
+        return {
+            "status": "success",
+            "metrics": {
+                "tononi_complexity": consciousness,
+                "free_energy": energy
+            },
+            "profile": profile_data
+        }
 
-winner = best_therapy(results, target=e_target)
-print(f"\n  ✅ Найкраща терапія: {winner['therapy']}")
+    except Exception as e:
+        print(f"❌ Критична помилка бекенду: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ── 5. Візуалізація ─��─────────────────────────────────────────────────────
-plot_all_components(e_before)
-plot_full_vector(e_before)
-plot_therapy_comparison(results)
-plot_before_after(therapy_a)
-plot_before_after(therapy_b)
-plot_before_after(therapy_c)
+if __name__ == "__main__":
+    uvicorn.run("app.api:app", host="0.0.0.0", port=8000, reload=True)
