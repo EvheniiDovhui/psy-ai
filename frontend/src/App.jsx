@@ -4,6 +4,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import PrimaryInterview from './pages/PrimaryInterview';
 import UnfinishedSentences from './pages/UnfinishedSentences';
+import BeckTest from './pages/BeckTest';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/interview" element={<PrimaryInterview />} />
             <Route path="/sentences" element={<UnfinishedSentences />} />
+            <Route path="/beck-test" element={<BeckTest />} />
           </Routes>
         </main>
       </div>
