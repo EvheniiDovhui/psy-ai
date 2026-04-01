@@ -128,7 +128,11 @@ export default function UnfinishedSentences() {
       </div>
 
       {analysisResults && (
-        <ResultsDisplay metrics={analysisResults.metrics} profile={analysisResults.profile} />
+        <ResultsDisplay
+          metrics={analysisResults.metrics}
+          profile={analysisResults.profile}
+          vectorData={analysisResults.vector_data}
+        />
       )}
     </div>
   );

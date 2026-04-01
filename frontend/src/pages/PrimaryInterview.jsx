@@ -4,6 +4,7 @@ import {
   FaArrowLeft, FaCheckCircle, FaHeartbeat, FaUsers, 
   FaBatteryFull, FaBrain, FaQuoteLeft, FaUserMd, FaExclamationTriangle 
 } from 'react-icons/fa';
+import ResultsDisplay from '../components/ResultsDisplay';
 
 export default function PrimaryInterview() {
   const navigate = useNavigate();
@@ -40,7 +41,8 @@ export default function PrimaryInterview() {
       if (!response.ok) throw new Error('Помилка сервера');
       
       const data = await response.json();
-      setResult(data.data);
+      // Зберігаємо повну відповідь для доступу до vector_data
+      setResult({ ...data.data, _fullResponse: data });
     } catch (error) {
       console.error(error);
       alert('Не вдалося отримати аналіз AI. Перевірте бекенд.');
@@ -165,6 +167,15 @@ export default function PrimaryInterview() {
               <p className="text-xl text-slate-600 leading-relaxed font-light">{result.clinical_summary}</p>
             </div>
           </div>
+
+          {/* Графіки з vector_data, якщо доступні */}
+          {result._fullResponse?.vector_data && (
+            <ResultsDisplay
+              profile={result._fullResponse.data}
+              metrics={result._fullResponse.metrics || { tononi_complexity: 0, free_energy: 0 }}
+              vectorData={result._fullResponse.vector_data}
+            />
+          )}
         </div>
       )}
     </div>

@@ -11,6 +11,11 @@ import json
 try:
     from app.core.ai_analyzer import analyze_text_with_gemini, analyze_interview_with_gemini
     from app.core.metrics import tononi_complexity, free_energy
+    from app.core.vectorization.vector_builder import (
+        build_state_vector,
+        compute_distance_to_expert,
+        COMPONENT_ORDER
+    )
 except ImportError as e:
     print(f"❌ Помилка імпорту! Перевір, чи створено файл app/core/ai_analyzer.py. Error: {e}")
     # Тимчасова функція-заглушка на випадок помилки імпорту
@@ -29,8 +34,8 @@ app = FastAPI(title="PSY-AI Brain Core")
 # Налаштування CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -68,24 +73,51 @@ async def analyze_sachs_test(data: SachsTestPayload):
 
         # 3. Рахуємо твої математичні метрики
         b5 = profile_data.get("big_five", {})
-        consciousness = tononi_complexity(b5)
-        energy = free_energy(b5)
+        try:
+            if not isinstance(b5, dict):
+                # Запобіжник, якщо AI повернув некоректний тип (наприклад int замість об'єкта)
+                b5 = {"default": 1.0}
+            elif not b5:
+                # Запобіжник, якщо пустий словник
+                b5 = {"default": 1.0}
 
-        # 4. Відправляємо ПОВНИЙ об'єкт (з conclusion) на фронтенд
+            consciousness = tononi_complexity(b5)
+            energy = free_energy(b5)
+        except Exception as metric_err:
+            print(f"Помилка при розрахунку метрик: {metric_err}")
+            consciousness = 0.0
+            energy = 0.0
+
+        # 4. Будуємо state vector для розширеної аналітики
+        try:
+            state_vector = build_state_vector(profile_data, label=data.testName, normalize=True)
+            distance_to_expert = compute_distance_to_expert(state_vector.vector)
+
+            # Конвертуємо numpy arrays у списки для JSON
+            vector_data = {
+                "vector": state_vector.vector.tolist(),
+                "components": {k: v.tolist() for k, v in state_vector.components.items()},
+                "distance_to_expert": float(distance_to_expert),
+                "label": state_vector.label
+            }
+        except Exception as e:
+            print(f"⚠️  Помилка при побудові вектора: {e}")
+            vector_data = None
+
+        # 5. Відправляємо ПОВНИЙ об'єкт (з conclusion та vector data) на фронтенд
         return {
             "status": "success",
             "metrics": {
                 "tononi_complexity": consciousness,
                 "free_energy": energy
             },
-            "profile": profile_data
+            "profile": profile_data,
+            "vector_data": vector_data
         }
 
     except Exception as e:
         print(f"❌ Критична помилка бекенду: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-    from app.core.ai_analyzer import analyze_interview_with_gemini
 
 class InterviewPayload(BaseModel):
     text: str
@@ -99,8 +131,27 @@ async def analyze_interview(data: InterviewPayload):
         result = analyze_interview_with_gemini(data.text)
         if not result:
             raise HTTPException(status_code=500, detail="AI Analysis failed")
-            
-        return {"status": "success", "data": result}
+
+        # Додаємо vector data для інтерв'ю, якщо AI повернув профіль
+        vector_data = None
+        if "big_five" in result and "maslow" in result and "schwartz" in result:
+            try:
+                state_vector = build_state_vector(result, label="Первинне інтерв'ю", normalize=True)
+                distance_to_expert = compute_distance_to_expert(state_vector.vector)
+                vector_data = {
+                    "vector": state_vector.vector.tolist(),
+                    "components": {k: v.tolist() for k, v in state_vector.components.items()},
+                    "distance_to_expert": float(distance_to_expert),
+                    "label": state_vector.label
+                }
+            except Exception as e:
+                print(f"⚠️  Помилка при побудові вектора для інтерв'ю: {e}")
+
+        return {
+            "status": "success",
+            "data": result,
+            "vector_data": vector_data
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -1,13 +1,13 @@
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
-  Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell 
+  Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell, LineChart, Line, ResponsiveContainer
 } from 'recharts';
 import { 
   FaBrain, FaBolt, FaUserCircle, FaLayerGroup, 
-  FaCompass, FaCommentDots, FaUserMd, FaExternalLinkAlt 
+  FaCompass, FaCommentDots, FaUserMd, FaExternalLinkAlt, FaChartLine
 } from 'react-icons/fa';
 
-export default function ResultsDisplay({ metrics, profile }) {
+export default function ResultsDisplay({ metrics, profile, vectorData }) {
   const MAX_SCORE = 5;
 
   // 1. Мапінг даних Big Five
@@ -112,6 +112,54 @@ export default function ResultsDisplay({ metrics, profile }) {
           </BarChart>
         </div>
       </div>
+
+      {/* Vector Data Analysis - якщо доступно */}
+      {vectorData && (
+        <div className="grid lg:grid-cols-2 gap-10 px-4 py-8 bg-gradient-to-br from-slate-50 to-indigo-50 rounded-3xl border border-indigo-100">
+          {/* Відстань до експертного вектора */}
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center">
+            <div className="text-center space-y-4">
+              <FaChartLine className="text-5xl text-indigo-600 mx-auto" />
+              <h3 className="text-2xl font-bold text-slate-700">Дистанція до Експертного Профілю</h3>
+              <div className="text-6xl font-black text-indigo-600">{vectorData.distance_to_expert?.toFixed(2)}</div>
+              <p className="text-sm text-slate-500 italic max-w-xs">
+                Менше — ближче до оптимального психологічного стану за екзпертними нормами
+              </p>
+            </div>
+          </div>
+
+          {/* Vector Components */}
+          {vectorData.components && (
+            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+              <h3 className="text-xl font-bold mb-6 text-slate-700">Розподіл компонентів вектора</h3>
+              <div className="space-y-4">
+                {Object.entries(vectorData.components).map(([component, values]) => (
+                  <div key={component} className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-slate-600 capitalize">{component}</span>
+                      <span className="text-xs text-slate-500">
+                        {Array.isArray(values) ? `${values.length} параметрів` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          component === 'big_five' ? 'bg-indigo-500' : 
+                          component === 'maslow' ? 'bg-amber-500' : 
+                          'bg-teal-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(100, (Array.isArray(values) ? values.reduce((a, b) => a + b, 0) / values.length : 0) * 20)}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Блок ВИСНОВКУ AI */}
       {profile.conclusion && (
