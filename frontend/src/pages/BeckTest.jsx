@@ -1,161 +1,66 @@
 // src/pages/BeckTest.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCheckCircle, FaExclamationTriangle, FaListUl, FaUserMd } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaLock, FaSpinner, FaMagic, FaListOl } from 'react-icons/fa';
 
-// Скорочений список для прикладу (в реальності додай усі 21 питання)
 const BECK_QUESTIONS = [
-  { id: 1, title: 'Смуток', options: [
-    { score: 0, text: 'Я не почуваюся засмученим.' },
-    { score: 1, text: 'Я часто засмучений.' },
-    { score: 2, text: 'Я весь час засмучений.' },
-    { score: 3, text: 'Я настільки засмучений і нещасний, що не можу цього витримати.' }
-  ]},
-  { id: 2, title: 'Песимізм', options: [
-    { score: 0, text: 'Я не дивлюся в майбутнє з безнадією.' },
-    { score: 1, text: 'Я відчуваю розчарування щодо майбутнього.' },
-    { score: 2, text: 'Я відчуваю, що мені нічого чекати.' },
-    { score: 3, text: 'Моє майбутнє безнадійне, і ніщо не зміниться на краще.' }
-  ]},
-  { id: 3, title: 'Відчуття неуспіху', options: [
-    { score: 0, text: 'Я не відчуваю себе невдахою.' },
-    { score: 1, text: 'Я зазнавав невдач частіше, ніж інші люди.' },
-    { score: 2, text: 'Озираючись на своє життя, я бачу лише низку невдач.' },
-    { score: 3, text: 'Я відчуваю себе повним невдахою як людина.' }
-  ]},
-  { id: 4, title: 'Втрата задоволення', options: [
-    { score: 0, text: 'Я отримую стільки ж задоволення від речей, як і раніше.' },
-    { score: 1, text: 'Я не отримую стільки задоволення від речей, як раніше.' },
-    { score: 2, text: 'Я майже не отримую задоволення від того, що раніше подобалося.' },
-    { score: 3, text: 'Я не можу отримати жодного задоволення від будь-чого.' }
-  ]},
-  { id: 5, title: 'Почуття провини', options: [
-    { score: 0, text: 'Я не відчуваю особливої провини.' },
-    { score: 1, text: 'Я часто відчуваю провину за багато речей.' },
-    { score: 2, text: 'Я відчуваю провину більшість часу.' },
-    { score: 3, text: 'Я відчуваю провину постійно.' }
-  ]},
-  { id: 6, title: 'Відчуття покарання', options: [
-    { score: 0, text: 'Я не відчуваю, що мене карають.' },
-    { score: 1, text: 'Я відчуваю, що мене можуть покарати.' },
-    { score: 2, text: 'Я очікую, що мене покарають.' },
-    { score: 3, text: 'Я відчуваю, що мене вже карають.' }
-  ]},
-  { id: 7, title: 'Незадоволеність собою', options: [
-    { score: 0, text: 'Моє ставлення до себе не змінилося.' },
-    { score: 1, text: 'Я втратив впевненість у собі.' },
-    { score: 2, text: 'Я розчарований у собі.' },
-    { score: 3, text: 'Я ненавиджу себе.' }
-  ]},
-  { id: 8, title: 'Самозвинувачення', options: [
-    { score: 0, text: 'Я не критикую і не звинувачую себе більше, ніж зазвичай.' },
-    { score: 1, text: 'Я більш критичний до себе, ніж раніше.' },
-    { score: 2, text: 'Я критикую себе за всі свої помилки.' },
-    { score: 3, text: 'Я звинувачую себе за все погане, що відбувається.' }
-  ]},
-  { id: 9, title: 'Суїцидальні думки', options: [
-    { score: 0, text: 'У мене немає жодних думок про самогубство.' },
-    { score: 1, text: 'У мене є думки про самогубство, але я не здійсню їх.' },
-    { score: 2, text: 'Я б хотів покінчити з собою.' },
-    { score: 3, text: 'Я б убив себе, якби була нагода.' }
-  ]},
-  { id: 10, title: 'Плаксивість', options: [
-    { score: 0, text: 'Я плачу не частіше, ніж раніше.' },
-    { score: 1, text: 'Зараз я плачу частіше, ніж раніше.' },
-    { score: 2, text: 'Я плачу через кожну дрібницю.' },
-    { score: 3, text: 'Я відчуваю бажання плакати, але не можу.' }
-  ]},
-  { id: 11, title: 'Неспокій (агітація)', options: [
-    { score: 0, text: 'Я не більш неспокійний і не напружений, ніж зазвичай.' },
-    { score: 1, text: 'Я відчуваю себе більш неспокійним і напруженим.' },
-    { score: 2, text: 'Я настільки неспокійний, що мені важко всидіти на місці.' },
-    { score: 3, text: 'Я настільки неспокійний, що постійно рухаюся або щось роблю.' }
-  ]},
-  { id: 12, title: 'Втрата інтересу', options: [
-    { score: 0, text: 'Я не втратив інтересу до інших людей чи занять.' },
-    { score: 1, text: 'Я менш зацікавлений у людях чи речах, ніж раніше.' },
-    { score: 2, text: 'Я втратив більшість своїх інтересів.' },
-    { score: 3, text: 'Мені взагалі нічого не цікаво.' }
-  ]},
-  { id: 13, title: 'Нешучість', options: [
-    { score: 0, text: 'Я приймаю рішення так само добре, як і завжди.' },
-    { score: 1, text: 'Мені важче приймати рішення, ніж зазвичай.' },
-    { score: 2, text: 'Мені набагато важче приймати рішення, ніж раніше.' },
-    { score: 3, text: 'Я взагалі не можу приймати жодних рішень.' }
-  ]},
-  { id: 14, title: 'Відчуття власної нікчемності', options: [
-    { score: 0, text: 'Я не відчуваю себе нікчемним.' },
-    { score: 1, text: 'Я не вважаю себе таким же корисним, як раніше.' },
-    { score: 2, text: 'Я відчуваю себе менш цінним у порівнянні з іншими.' },
-    { score: 3, text: 'Я відчуваю себе абсолютно нікчемним.' }
-  ]},
-  { id: 15, title: 'Втрата енергії', options: [
-    { score: 0, text: 'У мене стільки ж енергії, як і завжди.' },
-    { score: 1, text: 'У мене менше енергії, ніж раніше.' },
-    { score: 2, text: 'У мене не вистачає енергії робити багато речей.' },
-    { score: 3, text: 'У мене немає енергії робити будь-що.' }
-  ]},
-  { id: 16, title: 'Зміни сну', options: [
-    { score: 0, text: 'Мій сон не змінився.' },
-    { score: 1, text: 'Я сплю трохи більше/менше, ніж зазвичай.' },
-    { score: 2, text: 'Я сплю набагато більше/менше, ніж зазвичай.' },
-    { score: 3, text: 'Я сплю більшість дня / прокидаюся рано і не можу заснути.' }
-  ]},
-  { id: 17, title: 'Дратівливість', options: [
-    { score: 0, text: 'Я не більш дратівливий, ніж зазвичай.' },
-    { score: 1, text: 'Я більш дратівливий, ніж зазвичай.' },
-    { score: 2, text: 'Я набагато більш дратівливий, ніж зазвичай.' },
-    { score: 3, text: 'Я постійно відчуваю дратівливість.' }
-  ]},
-  { id: 18, title: 'Зміни апетиту', options: [
-    { score: 0, text: 'Мій апетит не змінився.' },
-    { score: 1, text: 'Мій апетит трохи гірший/кращий, ніж зазвичай.' },
-    { score: 2, text: 'Мій апетит набагато гірший/кращий, ніж раніше.' },
-    { score: 3, text: 'У мене взагалі немає апетиту / Я постійно хочу їсти.' }
-  ]},
-  { id: 19, title: 'Труднощі з концентрацією', options: [
-    { score: 0, text: 'Я можу концентруватися так само добре, як завжди.' },
-    { score: 1, text: 'Я не можу концентруватися так само добре, як зазвичай.' },
-    { score: 2, text: 'Мені важко зосередитися на чомусь довго.' },
-    { score: 3, text: 'Я виявив, що взагалі не можу ні на чому зосередитися.' }
-  ]},
-  { id: 20, title: 'Втома', options: [
-    { score: 0, text: 'Я не втомлююся більше, ніж зазвичай.' },
-    { score: 1, text: 'Я втомлююся швидше, ніж зазвичай.' },
-    { score: 2, text: 'Я занадто втомлений, щоб робити багато речей, які робив раніше.' },
-    { score: 3, text: 'Я занадто втомлений, щоб робити більшість справ.' }
-  ]},
-  { id: 21, title: 'Втрата лібідо', options: [
-    { score: 0, text: 'Я не помітив жодних змін у своєму інтересі до сексу.' },
-    { score: 1, text: 'Я менш зацікавлений у сексі, ніж раніше.' },
-    { score: 2, text: 'Мій інтерес до сексу значно знизився.' },
-    { score: 3, text: 'Я повністю втратив інтерес до сексу.' }
-  ]}
+  { id: 1, options: ["Я не відчуваю смутку.", "Я засмучений.", "Я весь час засмучений і не можу від цього звільнитися.", "Я настільки засмучений і нещасливий, що не можу це витримати."] },
+  { id: 2, options: ["Я не відчуваю особливого песимізму щодо майбутнього.", "Я відчуваю песимізм щодо майбутнього.", "Я відчуваю, що мені нічого чекати.", "Я відчуваю, що майбутнє безнадійне і нічого не зміниться на краще."] },
+  { id: 3, options: ["Я не відчуваю себе невдахою.", "Я відчуваю, що зазнав більше невдач, ніж інші.", "Озираючись на своє життя, я бачу багато невдач.", "Я відчуваю себе повним невдахою як людина."] },
+  { id: 4, options: ["Я отримую стільки ж задоволення від життя, як і раніше.", "Я не отримую стільки ж задоволення, як раніше.", "Я більше не отримую справжнього задоволення ні від чого.", "Мене нічого не радує і все набридло."] },
+  { id: 5, options: ["Я не відчуваю провини.", "Я часто відчуваю себе винним.", "Я майже завжди відчуваю себе винним.", "Я постійно відчуваю себе винним."] },
+  { id: 6, options: ["Я не відчуваю, що мене карають.", "Я відчуваю, що мене можуть покарати.", "Я очікую покарання.", "Я відчуваю, що мене вже карають."] },
+  { id: 7, options: ["Я не розчарований у собі.", "Я розчарований у собі.", "Я відчуваю відразу до себе.", "Я ненавиджу себе."] },
+  { id: 8, options: ["Я не гірший за інших.", "Я критикую себе за свої слабкості і помилки.", "Я звинувачую себе за всі свої вчинки.", "Я звинувачую себе у всьому поганому, що відбувається."] },
+  { id: 9, options: ["У мене немає думок про самогубство.", "У мене бувають думки про самогубство, але я їх не реалізую.", "Я б хотів покінчити з собою.", "Я б убив себе, якби була така можливість."] },
+  { id: 10, options: ["Я плачу не більше, ніж зазвичай.", "Зараз я плачу більше, ніж раніше.", "Зараз я весь час плачу.", "Раніше я міг плакати, а зараз не можу, навіть якщо хочу."] },
+  { id: 11, options: ["Я не більш дратівливий, ніж зазвичай.", "Я більш дратівливий, ніж раніше.", "Я весь час роздратований.", "Мене більше не дратує те, що дратувало раніше."] },
+  { id: 12, options: ["Я не втратив інтересу до інших людей.", "Я менше цікавлюся людьми, ніж раніше.", "Я майже втратив інтерес до інших людей.", "Я повністю втратив інтерес до інших людей."] },
+  { id: 13, options: ["Я приймаю рішення так само добре, як і раніше.", "Я відкладаю прийняття рішень частіше, ніж раніше.", "Мені набагато важче приймати рішення.", "Я взагалі не можу приймати рішення."] },
+  { id: 14, options: ["Я не виглядаю гірше, ніж зазвичай.", "Мене турбує те, що я виглядаю старим і непривабливим.", "Я відчуваю, що в моїй зовнішності відбулися постійні зміни, які роблять мене непривабливим.", "Я впевнений, що виглядаю потворно."] },
+  { id: 15, options: ["Я можу працювати так само добре, як і раніше.", "Мені потрібно докладати додаткових зусиль, щоб почати щось робити.", "Мені дуже важко змусити себе щось робити.", "Я взагалі не можу працювати."] },
+  { id: 16, options: ["Я сплю так само добре, як і раніше.", "Я не сплю так само добре, як раніше.", "Я прокидаюся на 1-2 години раніше звичайного і мені важко заснути знову.", "Я прокидаюся на кілька годин раніше звичайного і не можу заснути."] },
+  { id: 17, options: ["Я не втомлююся більше, ніж зазвичай.", "Я втомлююся швидше, ніж раніше.", "Я втомлююся майже від усього, що роблю.", "Я занадто втомлений, щоб щось робити."] },
+  { id: 18, options: ["Мій апетит не гірший, ніж зазвичай.", "Мій апетит не такий хороший, як раніше.", "Зараз у мене набагато гірший апетит.", "У мене взагалі немає апетиту."] },
+  { id: 19, options: ["Я не втратив у вазі останнім часом.", "Я втратив більше 2 кг.", "Я втратив більше 5 кг.", "Я втратив більше 7 кг."] },
+  { id: 20, options: ["Я не турбуюсь про своє здоров'я більше, ніж зазвичай.", "Мене турбують фізичні проблеми, такі як біль, розлад шлунку.", "Я дуже стурбований своїми фізичними проблемами, важко думати про щось інше.", "Я настільки стурбований своїм фізичним станом, що взагалі не можу думати про інше."] },
+  { id: 21, options: ["Мій інтерес до сексу не змінився.", "Я менше цікавлюся сексом, ніж раніше.", "Зараз я набагато менше цікавлюся сексом.", "Я повністю втратив інтерес до сексу."] }
 ];
 
 export default function BeckTest() {
   const navigate = useNavigate();
-  const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [rawScore, setRawScore] = useState(0);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  
+  const userId = localStorage.getItem('userId');
+  const [answers, setAnswers] = useState({});
 
-  const handleSelect = (qId, score, text) => {
-    setAnswers({ ...answers, [qId]: { score, text } });
+  useEffect(() => {
+    if (!localStorage.getItem('token')) navigate('/auth');
+  }, [navigate]);
+
+  const handleOptionChange = (questionId, score) => {
+    setAnswers(prev => ({ ...prev, [questionId]: score }));
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    
-    // 1. Рахуємо класичний бал
-    const totalScore = Object.values(answers).reduce((sum, a) => sum + a.score, 0);
-    setRawScore(totalScore);
+  const handleAutoFill = () => {
+    const fakeAnswers = {};
+    BECK_QUESTIONS.forEach(q => {
+      fakeAnswers[q.id] = Math.floor(Math.random() * 2) + 1; 
+    });
+    setAnswers(fakeAnswers);
+  };
 
-    // 2. Формуємо текст відповідей для AI (особливо важливі питання з балом > 0)
-    const answersSummary = Object.entries(answers)
-      .filter(([_, data]) => data.score > 0)
-      .map(([id, data]) => `Питання ${id}: ${data.text} (Бал: ${data.score})`)
-      .join('; ');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (Object.keys(answers).length < BECK_QUESTIONS.length) {
+      alert("Будь ласка, дайте відповідь на всі запитання.");
+      return;
+    }
+    
+    setLoading(true);
+    const totalScore = Object.values(answers).reduce((sum, score) => sum + score, 0);
+    const answersSummary = BECK_QUESTIONS.map(q => `Питання ${q.id}: бал ${answers[q.id]}`).join('; ');
 
     try {
       const response = await fetch('http://localhost:8000/api/analyze-beck', {
@@ -166,97 +71,207 @@ export default function BeckTest() {
 
       if (!response.ok) throw new Error('Помилка сервера');
       const data = await response.json();
-      setResult(data.data);
+      
+      setAnalysisResults(data.data);
+
+      if (userId && data.status === 'success') {
+        
+        let severityLevel = "Норма";
+        if (totalScore >= 10 && totalScore <= 15) severityLevel = "Легка депресія (субдепресія)";
+        if (totalScore >= 16 && totalScore <= 19) severityLevel = "Помірна депресія";
+        if (totalScore >= 20 && totalScore <= 29) severityLevel = "Виражена депресія (середньої тяжкості)";
+        if (totalScore >= 30) severityLevel = "Тяжка депресія";
+
+        // ==========================================================
+        // УЛЬТРА-БРОНЕБІЙНИЙ ПАРСЕР (Розуміє і текст, і JSON)
+        // ==========================================================
+        let aiSummary = "Аналіз проведено";
+        let aiRecs = ["Деталі відсутні"];
+
+        let aiData = data.data;
+
+        // Крок 1: Якщо ШІ повернув текст, але всередині прихований JSON (маркдаун-код)
+        if (typeof aiData === 'string') {
+          try {
+            // Пробуємо очистити від ```json і розпарсити
+            const cleanedString = aiData.replace(/```json/g, '').replace(/```/g, '').trim();
+            aiData = JSON.parse(cleanedString);
+          } catch (e) {
+            // Це справжній звичайний текст, залишаємо як є
+          }
+        }
+
+        // Крок 2: Розбираємо дані
+        if (typeof aiData === 'object' && aiData !== null) {
+          // Якщо це об'єкт (як на твоєму скріншоті)
+          aiSummary = aiData.clinical_summary || aiData.summary || aiData.analysis || "Опис відсутній";
+          
+          // Шукаємо рекомендації або маркери ризику
+          const recs = aiData.recommendations || aiData.action_plan || aiData.risk_markers;
+          if (Array.isArray(recs)) {
+            aiRecs = recs;
+          } else if (typeof recs === 'string') {
+            aiRecs = [recs];
+          }
+        } else if (typeof aiData === 'string') {
+          // Якщо це звичайний текст (Fallback)
+          const lowerText = aiData.toLowerCase();
+          const recIndex = lowerText.indexOf('рекомендації');
+
+          if (recIndex !== -1) {
+            aiSummary = aiData.substring(0, recIndex).replace(/\*+/g, '').trim();
+            const recText = aiData.substring(recIndex + 'рекомендації'.length).replace(/^[:\s*]+/, '');
+            aiRecs = recText.split('\n')
+              .map(r => r.replace(/^[-*•\d.]+\s*/, '').trim())
+              .filter(r => r.length > 5);
+          } else {
+            aiSummary = aiData.replace(/\*+/g, '');
+            aiRecs = ["Рекомендації інтегровані в загальне резюме."];
+          }
+        }
+        // ==========================================================
+
+        const rawAnswers = BECK_QUESTIONS.map(q => ({
+          question: `Питання ${q.id}: ${q.options[0]}`, 
+          answer: answers[q.id] !== undefined ? q.options[answers[q.id]] : "Пропущено"
+        }));
+
+        const formattedDataForPsy = {
+            metrics: null,
+            profile: {
+                "Загальний бал": totalScore,
+                "Клінічний рівень": severityLevel,
+                "Аналітичне резюме AI": aiSummary,
+                "Рекомендації для терапії": aiRecs
+            },
+            raw_answers: rawAnswers
+        };
+
+        await fetch('http://localhost:8000/api/save-test-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: parseInt(userId),
+            test_type: 'Шкала депресії Бека',
+            ai_response: JSON.stringify(formattedDataForPsy) 
+          })
+        });
+      }
+
+      setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
     } catch (error) {
       console.error(error);
-      alert('Помилка аналізу. Перевірте бекенд.');
+      alert('Не вдалося отримати аналіз AI.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isComplete = Object.keys(answers).length === BECK_QUESTIONS.length;
-
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 animate-fade-in">
-      <button onClick={() => result ? setResult(null) : navigate('/')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-6 font-medium">
-        <FaArrowLeft /> {result ? 'Повернутися до тесту' : 'На головну'}
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in mb-20">
+      
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold mb-4 transition-colors">
+        <FaArrowLeft /> Повернутися в кабінет
       </button>
 
-      {!result ? (
-        <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-slate-100">
-          <h1 className="text-4xl font-black text-slate-900 mb-4">Шкала депресії Бека (BDI)</h1>
-          <p className="text-slate-500 mb-10 text-lg">Оберіть одне твердження в кожній групі, яке найкраще описує ваш стан за останній тиждень.</p>
+      {!analysisResults ? (
+        <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-sm border border-slate-100">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-slate-100 pb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-indigo-100 text-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                  <FaListOl />
+                </div>
+                <h1 className="text-3xl font-black text-slate-900">Шкала депресії Бека</h1>
+              </div>
+              <p className="text-slate-500 font-medium text-lg ml-14">Уважно прочитайте кожну групу тверджень і оберіть те, яке найкраще описує ваш стан за останній тиждень.</p>
+            </div>
+            <button 
+              type="button" 
+              onClick={handleAutoFill}
+              className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-5 py-2.5 rounded-full font-bold text-sm transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              <FaMagic /> Автозаповнення
+            </button>
+          </div>
 
-          <div className="space-y-12">
-            {BECK_QUESTIONS.map((q) => (
-              <div key={q.id} className="space-y-4">
-                <h3 className="text-xl font-bold text-slate-800 border-b pb-2">{q.id}. {q.title}</h3>
-                <div className="flex flex-col gap-3">
-                  {q.options.map((opt, i) => (
-                    <label key={i} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 ${answers[q.id]?.score === opt.score ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-indigo-300 bg-white'}`}>
+          <form onSubmit={handleSubmit} className="space-y-10">
+            {BECK_QUESTIONS.map((q, index) => (
+              <div key={q.id} className="bg-slate-50 p-6 md:p-8 rounded-[2rem] border border-slate-100 transition-all hover:border-indigo-200">
+                <label className="flex items-center gap-2 text-lg font-black text-slate-800 mb-6">
+                  <span className="bg-white text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm text-sm border border-slate-200">{index + 1}</span> 
+                  Оберіть твердження:
+                </label>
+                
+                <div className="flex flex-col gap-3 ml-2 md:ml-10">
+                  {q.options.map((optionText, scoreIndex) => (
+                    <label 
+                      key={scoreIndex} 
+                      className={`flex items-start gap-4 p-4 rounded-2xl cursor-pointer border-2 transition-all ${
+                        answers[q.id] === scoreIndex 
+                        ? 'bg-indigo-50 border-indigo-500 shadow-sm' 
+                        : 'bg-white border-transparent text-slate-600 hover:border-slate-200 shadow-sm'
+                      }`}
+                    >
                       <input 
-                        type="radio" name={`question-${q.id}`} 
-                        checked={answers[q.id]?.score === opt.score}
-                        onChange={() => handleSelect(q.id, opt.score, opt.text)}
-                        className="w-5 h-5 text-indigo-600 focus:ring-indigo-500"
+                        type="radio" 
+                        name={`question-${q.id}`} 
+                        value={scoreIndex} 
+                        checked={answers[q.id] === scoreIndex}
+                        onChange={() => handleOptionChange(q.id, scoreIndex)} 
+                        className="mt-1 w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer" 
                       />
-                      <span className="text-slate-700 font-medium">{opt.text}</span>
+                      <span className={`font-medium text-lg ${answers[q.id] === scoreIndex ? 'text-indigo-900 font-bold' : ''}`}>
+                        {optionText}
+                      </span>
                     </label>
                   ))}
                 </div>
               </div>
             ))}
-          </div>
 
-          <button 
-            onClick={handleSubmit} disabled={!isComplete || loading}
-            className="w-full mt-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-[2rem] text-xl transition-all shadow-xl disabled:opacity-50 flex justify-center items-center gap-3"
-          >
-            {loading ? 'AI Аналізує результати...' : 'Отримати клінічний висновок'}
-          </button>
+            <div className="pt-4 sticky bottom-6 z-10">
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl shadow-indigo-200 flex justify-center items-center gap-3"
+                >
+                  {loading ? (
+                    <><div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> Обробка результатів...</>
+                  ) : (
+                    <><FaCheckCircle className="text-2xl" /> Завершити тест</>
+                  )}
+                </button>
+            </div>
+          </form>
         </div>
       ) : (
-        <div className="space-y-8 animate-slide-up pb-20">
-          {/* Блок результату */}
-          <div className={`p-12 rounded-[3.5rem] shadow-2xl text-white ${rawScore > 19 ? 'bg-rose-600' : rawScore > 13 ? 'bg-amber-500' : 'bg-emerald-500'}`}>
-            <div className="flex justify-between items-start mb-6">
-              <span className="bg-white/20 px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest">BDI Score</span>
-              <span className="text-7xl font-black">{rawScore}<span className="text-3xl opacity-50">/63</span></span>
+        <div className="bg-emerald-50 text-emerald-800 p-8 md:p-12 rounded-[3rem] shadow-sm animate-fade-in border border-emerald-100 mt-10 text-center">
+            <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center text-4xl shadow-md mb-6 mx-auto animate-bounce">
+                <FaCheckCircle />
             </div>
-            <h2 className="text-4xl font-medium leading-tight">"{result?.severity_label}"</h2>
-          </div>
-
-          {/* Висновок AI */}
-          <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
-            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3"><FaUserMd className="text-indigo-600"/> Клінічне резюме AI</h3>
-            <p className="text-lg text-slate-600 leading-relaxed">{result?.clinical_summary}</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Маркери */}
-            <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-xl space-y-6">
-              <h4 className="text-lg font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><FaExclamationTriangle className="text-rose-400"/> Маркери ризику</h4>
-              <ul className="space-y-4">
-                {(result?.risk_markers || []).map((m, i) => (
-                  <li key={i} className="flex items-start gap-3 bg-white/10 p-4 rounded-2xl"><span className="text-rose-400 font-bold">•</span> {m}</li>
-                ))}
-              </ul>
+            <h2 className="text-3xl font-black mb-4">Тестування завершено!</h2>
+            <p className="text-lg font-medium text-emerald-700 mb-8">Ваші результати успішно зашифровані та передані вашому фахівцю.</p>
+            
+            <div className="bg-white p-6 md:p-8 rounded-3xl text-left shadow-sm border border-emerald-100 mb-8 max-w-2xl mx-auto">
+                <h3 className="text-xl font-bold text-slate-800 mb-3">Короткий відгук:</h3>
+                <p className="text-slate-600 leading-relaxed font-medium">
+                    {typeof analysisResults === 'string' 
+                        ? (analysisResults.length > 250 ? analysisResults.substring(0, 250).replace(/\*+/g, '') + '...' : analysisResults.replace(/\*+/g, '')) 
+                        : 'Дані оброблено. Ваш стан проаналізовано.'}
+                </p>
+                
+                <div className="mt-8 p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-4">
+                    <FaLock className="text-indigo-400 text-2xl shrink-0 mt-1" />
+                    <p className="text-indigo-700 text-sm font-medium leading-relaxed">
+                        Щоб уникнути хибної самодіагностики, ваші точні бали та клінічний рівень депресії за Шкалою Бека приховані. Ваш психолог обговорить їх з вами на наступній сесії.
+                    </p>
+                </div>
             </div>
-
-            {/* План дій */}
-            <div className="bg-indigo-50 p-10 rounded-[3rem] border border-indigo-100 space-y-6">
-              <h4 className="text-lg font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2"><FaListUl/> План дій</h4>
-              <div className="space-y-4">
-                {(result?.action_plan || []).map((step, i) => (
-                  <div key={i} className="bg-white p-5 rounded-2xl shadow-sm text-slate-700 font-medium flex gap-4 items-center">
-                    <div className="bg-indigo-100 text-indigo-600 w-8 h-8 flex items-center justify-center rounded-full font-black flex-shrink-0">{i+1}</div>
-                    {step}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            
+            <button onClick={() => navigate('/dashboard')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-md">
+                Повернутися в кабінет
+            </button>
         </div>
       )}
     </div>
