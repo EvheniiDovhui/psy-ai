@@ -26,6 +26,7 @@ def clean_ai_json(raw_text):
 def analyze_text_with_gemini(text: str):
     """Для тесту Сакса-Леві"""
     prompt = f"""
+<<<<<<< Updated upstream
     Проаналізуй тест Сакса-Леві. Оціни показники від 1 до 5.
     Текст: "{text}"
     Поверни ТІЛЬКИ чистий JSON:
@@ -43,6 +44,28 @@ def analyze_text_with_gemini(text: str):
         print(f"🔥 SACHS AI ERROR: {e}")
         return None
 
+=======
+    Ти — професійний психолог. Проаналізуй результати тесту незакінчених речень (Сакса-Леві).
+    
+    ОЦІНКА:
+    Проаналізуй кожне речення в контексті. Оціни за шкалою 1-5 (де 5 - найвищий прояв) наступні параметри:
+    1. Big Five (neuroticism, openness, conscientiousness, extraversion, agreeableness)
+    2. Maslow (physiological, safety, love, esteem, self_actualization)
+    3. Schwartz (power, achievement, hedonism, security, benevolence, universalism)
+
+    ТЕКСТ ТЕСТУ:
+    "{text}"
+
+    ПОВЕРНИ ТІЛЬКИ JSON:
+    {{
+        "big_five": {{"neuroticism": x, "openness": x, ...}},
+        "maslow": {{...}},
+        "schwartz": {{...}},
+        "conclusion": "короткий психологічний портрет на основі цілісних речень"
+    }}
+    """
+# ЦЯ ФУНКЦІЯ ТАКОЖ МАЄ БУТИ ТУТ (для інтерв'ю)
+>>>>>>> Stashed changes
 def analyze_interview_with_gemini(text: str):
     """Для Первинного інтерв'ю"""
     prompt = f"""
