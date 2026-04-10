@@ -1,1 +1,29 @@
+/* src/index.css */
 @import "tailwindcss";
+
+/* Кастомна анімація для прогрес-бару */
+@keyframes pulse-width {
+  0% {
+    width: 0%;
+    left: 0%;
+  }
+  50% {
+    width: 100%;
+    left: 0%;
+  }
+  100% {
+    width: 0%;
+    left: 100%;
+  }
+}
+
+.animate-pulse-width {
+  animation: pulse-width 3s infinite ease-in-out;
+}
+
+/* Інші кастомні класи */
+@layer components {
+  .hero-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600;
+  }
+}
