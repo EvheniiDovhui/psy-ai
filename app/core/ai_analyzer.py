@@ -26,15 +26,23 @@ def clean_ai_json(raw_text):
 def analyze_text_with_gemini(text: str):
     """Для тесту Сакса-Леві"""
     prompt = f"""
-<<<<<<< Updated upstream
-    Проаналізуй тест Сакса-Леві. Оціни показники від 1 до 5.
-    Текст: "{text}"
-    Поверни ТІЛЬКИ чистий JSON:
+    Ти — професійний психолог. Проаналізуй результати тесту незакінчених речень (Сакса-Леві).
+    
+    ОЦІНКА:
+    Проаналізуй кожне речення в контексті. Оціни за шкалою 1-5 (де 5 - найвищий прояв) наступні параметри:
+    1. Big Five (neuroticism, openness, conscientiousness, extraversion, agreeableness)
+    2. Maslow (physiological, safety, love, esteem, self_actualization)
+    3. Schwartz (power, achievement, hedonism, security, benevolence, universalism, self_direction, stimulation, conformity, tradition)
+
+    ТЕКСТ ТЕСТУ:
+    "{text}"
+
+    ПОВЕРНИ ТІЛЬКИ чистий JSON з точними ключами:
     {{
         "big_five": {{"neuroticism": 1-5, "extraversion": 1-5, "openness": 1-5, "agreeableness": 1-5, "conscientiousness": 1-5}},
         "maslow": {{"physiological": 1-5, "safety": 1-5, "love": 1-5, "esteem": 1-5, "self_actualization": 1-5}},
         "schwartz": {{"power": 1-5, "achievement": 1-5, "hedonism": 1-5, "security": 1-5, "benevolence": 1-5, "universalism": 1-5, "self_direction": 1-5, "stimulation": 1-5, "conformity": 1-5, "tradition": 1-5}},
-        "conclusion": "Твій психологічний висновок..."
+        "conclusion": "короткий психологічний портрет на основі цілісних речень"
     }}
     """
     try:
@@ -44,28 +52,6 @@ def analyze_text_with_gemini(text: str):
         print(f"🔥 SACHS AI ERROR: {e}")
         return None
 
-=======
-    Ти — професійний психолог. Проаналізуй результати тесту незакінчених речень (Сакса-Леві).
-    
-    ОЦІНКА:
-    Проаналізуй кожне речення в контексті. Оціни за шкалою 1-5 (де 5 - найвищий прояв) наступні параметри:
-    1. Big Five (neuroticism, openness, conscientiousness, extraversion, agreeableness)
-    2. Maslow (physiological, safety, love, esteem, self_actualization)
-    3. Schwartz (power, achievement, hedonism, security, benevolence, universalism)
-
-    ТЕКСТ ТЕСТУ:
-    "{text}"
-
-    ПОВЕРНИ ТІЛЬКИ JSON:
-    {{
-        "big_five": {{"neuroticism": x, "openness": x, ...}},
-        "maslow": {{...}},
-        "schwartz": {{...}},
-        "conclusion": "короткий психологічний портрет на основі цілісних речень"
-    }}
-    """
-# ЦЯ ФУНКЦІЯ ТАКОЖ МАЄ БУТИ ТУТ (для інтерв'ю)
->>>>>>> Stashed changes
 def analyze_interview_with_gemini(text: str):
     """Для Первинного інтерв'ю"""
     prompt = f"""
@@ -90,8 +76,6 @@ def analyze_interview_with_gemini(text: str):
     except Exception as e:
         print(f"🔥 INTERVIEW AI ERROR: {e}")
         return None
-
-# Додай в кінець файлу app/core/ai_analyzer.py
 
 def analyze_beck_with_gemini(total_score: int, answers_text: str):
     """ШІ-аналіз Шкали депресії Бека"""
