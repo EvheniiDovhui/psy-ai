@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCheckCircle, FaLock, FaSpinner, FaMagic, FaListOl } from 'react-icons/fa';
+import { API_BASE_URL } from '../../lib/config/api';
 
 const BECK_QUESTIONS = [
   { id: 1, options: ["Я не відчуваю смутку.", "Я засмучений.", "Я весь час засмучений і не можу від цього звільнитися.", "Я настільки засмучений і нещасливий, що не можу це витримати."] },
@@ -29,6 +30,7 @@ const BECK_QUESTIONS = [
 
 export default function BeckTest() {
   const navigate = useNavigate();
+  const isDevMode = import.meta.env.DEV;
   const [loading, setLoading] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
   
@@ -63,14 +65,13 @@ export default function BeckTest() {
     const answersSummary = BECK_QUESTIONS.map(q => `Питання ${q.id}: бал ${answers[q.id]}`).join('; ');
 
     try {
-      const response = await fetch('http://localhost:8000/api/analyze-beck', {
+      const response = await fetch(`${API_BASE_URL}/api/analyze-beck`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ total_score: totalScore, answers_summary: answersSummary }),
       });
-
-      if (!response.ok) throw new Error('Помилка сервера');
       const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || `Помилка сервера (${response.status})`);
       
       setAnalysisResults(data.data);
 
@@ -96,7 +97,7 @@ export default function BeckTest() {
             // Пробуємо очистити від ```json і розпарсити
             const cleanedString = aiData.replace(/```json/g, '').replace(/```/g, '').trim();
             aiData = JSON.parse(cleanedString);
-          } catch (e) {
+          } catch {
             // Це справжній звичайний текст, залишаємо як є
           }
         }
@@ -147,7 +148,7 @@ export default function BeckTest() {
             raw_answers: rawAnswers
         };
 
-        await fetch('http://localhost:8000/api/save-test-result', {
+        await fetch(`${API_BASE_URL}/api/save-test-result`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -168,38 +169,40 @@ export default function BeckTest() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in mb-20">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 mb-20 pt-28">
       
-      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold mb-4 transition-colors">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-teal-700 font-bold mb-4 transition-colors">
         <FaArrowLeft /> Повернутися в кабінет
       </button>
 
       {!analysisResults ? (
-        <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-sm border border-slate-100">
+        <div className="glass-surface p-8 md:p-12 rounded-[2.5rem] soft-shadow border border-slate-200">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-slate-100 pb-8">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="bg-indigo-100 text-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                <div className="bg-teal-100 text-teal-700 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
                   <FaListOl />
                 </div>
-                <h1 className="text-3xl font-black text-slate-900">Шкала депресії Бека</h1>
+                <h1 className="text-3xl brand-display font-bold text-slate-900">Шкала депресії Бека</h1>
               </div>
               <p className="text-slate-500 font-medium text-lg ml-14">Уважно прочитайте кожну групу тверджень і оберіть те, яке найкраще описує ваш стан за останній тиждень.</p>
             </div>
-            <button 
-              type="button" 
-              onClick={handleAutoFill}
-              className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-5 py-2.5 rounded-full font-bold text-sm transition-colors whitespace-nowrap flex items-center gap-2"
-            >
-              <FaMagic /> Автозаповнення
-            </button>
+            {isDevMode && (
+              <button 
+                type="button" 
+                onClick={handleAutoFill}
+                className="text-teal-700 bg-teal-50 hover:bg-teal-100 px-5 py-2.5 rounded-full font-bold text-sm transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                <FaMagic /> Автозаповнення
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-10">
             {BECK_QUESTIONS.map((q, index) => (
-              <div key={q.id} className="bg-slate-50 p-6 md:p-8 rounded-[2rem] border border-slate-100 transition-all hover:border-indigo-200">
+              <div key={q.id} className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-200 transition-all hover:border-teal-300">
                 <label className="flex items-center gap-2 text-lg font-black text-slate-800 mb-6">
-                  <span className="bg-white text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center shadow-sm text-sm border border-slate-200">{index + 1}</span> 
+                  <span className="bg-teal-50 text-teal-700 w-8 h-8 rounded-full flex items-center justify-center shadow-sm text-sm border border-teal-100">{index + 1}</span> 
                   Оберіть твердження:
                 </label>
                 
@@ -209,7 +212,7 @@ export default function BeckTest() {
                       key={scoreIndex} 
                       className={`flex items-start gap-4 p-4 rounded-2xl cursor-pointer border-2 transition-all ${
                         answers[q.id] === scoreIndex 
-                        ? 'bg-indigo-50 border-indigo-500 shadow-sm' 
+                        ? 'bg-teal-50 border-teal-600 shadow-sm' 
                         : 'bg-white border-transparent text-slate-600 hover:border-slate-200 shadow-sm'
                       }`}
                     >
@@ -219,9 +222,9 @@ export default function BeckTest() {
                         value={scoreIndex} 
                         checked={answers[q.id] === scoreIndex}
                         onChange={() => handleOptionChange(q.id, scoreIndex)} 
-                        className="mt-1 w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer" 
+                        className="mt-1 w-5 h-5 text-teal-700 focus:ring-teal-600 border-slate-300 cursor-pointer" 
                       />
-                      <span className={`font-medium text-lg ${answers[q.id] === scoreIndex ? 'text-indigo-900 font-bold' : ''}`}>
+                      <span className={`font-medium text-lg ${answers[q.id] === scoreIndex ? 'text-teal-900 font-bold' : ''}`}>
                         {optionText}
                       </span>
                     </label>
@@ -234,7 +237,7 @@ export default function BeckTest() {
                 <button 
                   type="submit" 
                   disabled={loading} 
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl shadow-indigo-200 flex justify-center items-center gap-3"
+                  className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 text-white font-black py-6 rounded-2xl text-xl transition-all shadow-xl shadow-teal-900/20 flex justify-center items-center gap-3"
                 >
                   {loading ? (
                     <><div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> Обробка результатів...</>
@@ -246,12 +249,12 @@ export default function BeckTest() {
           </form>
         </div>
       ) : (
-        <div className="bg-emerald-50 text-emerald-800 p-8 md:p-12 rounded-[3rem] shadow-sm animate-fade-in border border-emerald-100 mt-10 text-center">
-            <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center text-4xl shadow-md mb-6 mx-auto animate-bounce">
+        <div className="bg-teal-50 text-teal-900 p-8 md:p-12 rounded-[2.6rem] shadow-sm border border-teal-200 mt-10 text-center">
+          <div className="w-20 h-20 bg-teal-700 text-white rounded-full flex items-center justify-center text-4xl shadow-md mb-6 mx-auto animate-bounce">
                 <FaCheckCircle />
             </div>
             <h2 className="text-3xl font-black mb-4">Тестування завершено!</h2>
-            <p className="text-lg font-medium text-emerald-700 mb-8">Ваші результати успішно зашифровані та передані вашому фахівцю.</p>
+          <p className="text-lg font-medium text-teal-800 mb-8">Ваші результати успішно зашифровані та передані вашому фахівцю.</p>
             
             <div className="bg-white p-6 md:p-8 rounded-3xl text-left shadow-sm border border-emerald-100 mb-8 max-w-2xl mx-auto">
                 <h3 className="text-xl font-bold text-slate-800 mb-3">Короткий відгук:</h3>
@@ -261,15 +264,15 @@ export default function BeckTest() {
                         : 'Дані оброблено. Ваш стан проаналізовано.'}
                 </p>
                 
-                <div className="mt-8 p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-4">
-                    <FaLock className="text-indigo-400 text-2xl shrink-0 mt-1" />
-                    <p className="text-indigo-700 text-sm font-medium leading-relaxed">
+                <div className="mt-8 p-5 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-4">
+                  <FaLock className="text-amber-700 text-2xl shrink-0 mt-1" />
+                  <p className="text-amber-900 text-sm font-medium leading-relaxed">
                         Щоб уникнути хибної самодіагностики, ваші точні бали та клінічний рівень депресії за Шкалою Бека приховані. Ваш психолог обговорить їх з вами на наступній сесії.
                     </p>
                 </div>
             </div>
             
-            <button onClick={() => navigate('/dashboard')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-md">
+              <button onClick={() => navigate('/dashboard')} className="bg-teal-700 hover:bg-teal-800 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-md">
                 Повернутися в кабінет
             </button>
         </div>

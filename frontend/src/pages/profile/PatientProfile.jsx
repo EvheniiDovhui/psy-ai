@@ -6,7 +6,8 @@ import {
   FaCheck, FaSmile, FaPaperclip, FaMicrophone, FaEllipsisV, FaChevronRight, FaUserEdit
 } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react'; 
-import ResultsDisplay from '../components/ResultsDisplay';
+import ResultsDisplay from '../../components/common/ResultsDisplay';
+import { API_BASE_URL } from '../../lib/config/api';
 
 export default function PatientProfile() {
   const { id: patientId } = useParams(); 
@@ -21,15 +22,17 @@ export default function PatientProfile() {
   const [messages, setMessages] = useState([]); 
   const [showEmoji, setShowEmoji] = useState(false); 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const shouldForceScrollRef = useRef(true);
   
   const myId = parseInt(localStorage.getItem('userId'));
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/user/${patientId}`)
+    fetch(`${API_BASE_URL}/api/user/${patientId}`)
       .then(res => res.json())
       .then(data => { if (data.status === 'success') setPatient(data.data); });
 
-    fetch(`http://localhost:8000/api/test-results/${patientId}`)
+    fetch(`${API_BASE_URL}/api/test-results/${patientId}`)
       .then(res => res.json())
       .then(data => { if (data.status === 'success') setTestResults(data.data); });
   }, [patientId]);
@@ -38,7 +41,7 @@ export default function PatientProfile() {
     const fetchMessages = async () => {
       if (!myId || !patientId) return;
       try {
-        const res = await fetch(`http://localhost:8000/api/messages/${myId}/${patientId}`);
+        const res = await fetch(`${API_BASE_URL}/api/messages/${myId}/${patientId}`);
         const data = await res.json();
         if (data.status === 'success') setMessages(data.data);
       } catch (error) { console.error(error); }
@@ -48,15 +51,27 @@ export default function PatientProfile() {
     return () => clearInterval(interval);
   }, [myId, patientId]);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceFromBottom < 140;
+
+    if (shouldForceScrollRef.current || isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      shouldForceScrollRef.current = false;
+    }
+  }, [messages]);
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!chatMessage.trim()) return;
     const textToSend = chatMessage;
     setChatMessage(''); setShowEmoji(false);
+    shouldForceScrollRef.current = true;
     try {
-      await fetch('http://localhost:8000/api/messages', {
+      await fetch(`${API_BASE_URL}/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sender_id: myId, receiver_id: parseInt(patientId), text: textToSend }),
@@ -71,13 +86,13 @@ export default function PatientProfile() {
     return (
       <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-200 mt-8 shadow-sm">
         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-          <FaUserEdit className="text-indigo-400 text-lg" /> Оригінальні відповіді клієнта
+          <FaUserEdit className="text-teal-700 text-lg" /> Оригінальні відповіді клієнта
         </h4>
         <div className="space-y-4">
           {rawAnswers.map((qa, i) => (
             <div key={i} className="border-b border-slate-50 last:border-0 pb-4 last:pb-0">
               <div className="text-slate-500 text-sm font-bold mb-1">{qa.question}</div>
-              <div className="text-indigo-900 font-medium italic text-lg">"{qa.answer}"</div>
+              <div className="text-teal-900 font-medium italic text-lg">"{qa.answer}"</div>
             </div>
           ))}
         </div>
@@ -147,23 +162,23 @@ export default function PatientProfile() {
             {/* AI Аналітика */}
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-400"></div> Аналітичне резюме AI
+                <h4 className="text-sm font-black text-teal-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-teal-700"></div> Аналітичне резюме AI
                 </h4>
                 <p className="text-slate-700 text-lg leading-relaxed font-medium">{summary}</p>
               </div>
 
-              <div className="bg-indigo-50/50 p-8 rounded-[2.5rem] border border-indigo-100/50 shadow-sm">
-                <h4 className="text-sm font-black text-indigo-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div> Рекомендації для терапії
+              <div className="bg-amber-50 p-8 rounded-[2.5rem] border border-amber-200 shadow-sm">
+                <h4 className="text-sm font-black text-amber-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-amber-700"></div> Рекомендації для терапії
                 </h4>
                 <div className="flex flex-col gap-3">
                   {Array.isArray(recs) ? recs.map((rec, i) => (
                     <div key={i} className="flex gap-3">
-                      <span className="text-indigo-400 font-bold mt-1">•</span>
-                      <span className="text-indigo-900 font-medium leading-relaxed">{rec}</span>
+                      <span className="text-amber-700 font-bold mt-1">•</span>
+                      <span className="text-amber-900 font-medium leading-relaxed">{rec}</span>
                     </div>
-                  )) : <p className="text-indigo-900 font-medium">{recs}</p>}
+                  )) : <p className="text-amber-900 font-medium">{recs}</p>}
                 </div>
               </div>
             </div>
@@ -194,8 +209,8 @@ export default function PatientProfile() {
             <div className="space-y-6 mt-8">
               {Object.entries(parsed.profile).map(([key, value]) => (
                 <div key={key} className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                  <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-indigo-400"></div> {key}
+                  <h4 className="text-sm font-black text-teal-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-teal-700"></div> {key}
                   </h4>
                   {Array.isArray(value) ? (
                     <div className="flex flex-wrap gap-3">
@@ -218,26 +233,26 @@ export default function PatientProfile() {
 
       return <pre className="bg-slate-50 p-6 rounded-2xl overflow-auto">{JSON.stringify(parsed, null, 2)}</pre>;
 
-    } catch (e) {
+    } catch {
       return <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 whitespace-pre-wrap text-slate-700 text-lg leading-relaxed mt-6">{test.ai_response}</div>;
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 animate-fade-in mb-20">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 mb-20 pt-28">
       <div className="flex items-center justify-between mb-8">
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold transition-colors">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-teal-700 font-bold transition-colors">
           <FaArrowLeft /> Назад до списку
         </button>
-        <div className="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-slate-200 flex items-center gap-2">
-          <FaCheck className="text-emerald-500" /> Профіль активний
+        <div className="bg-teal-50 text-teal-800 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border border-teal-200 flex items-center gap-2">
+          <FaCheck className="text-teal-700" /> Профіль активний
         </div>
       </div>
 
-      <div className="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[75vh]">
-        <div className="w-full md:w-1/3 bg-slate-50 p-8 border-r border-slate-100 flex flex-col z-10">
+      <div className="bg-white rounded-[2.6rem] soft-shadow border border-slate-200 overflow-hidden flex flex-col md:flex-row min-h-[75vh]">
+        <div className="w-full md:w-1/3 bg-[#f5f8f7] p-8 border-r border-slate-200 flex flex-col z-10">
           <div className="flex flex-col items-center text-center mb-10">
-            <div className="w-24 h-24 bg-white text-indigo-600 rounded-full flex items-center justify-center text-4xl font-black shadow-sm mb-4 border border-slate-100">
+            <div className="w-24 h-24 bg-white text-teal-700 rounded-full flex items-center justify-center text-4xl font-black shadow-sm mb-4 border border-slate-200">
               {patient.name.charAt(0).toUpperCase()}
             </div>
             <h2 className="text-2xl font-black text-slate-800">{patient.name}</h2>
@@ -245,10 +260,10 @@ export default function PatientProfile() {
             <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-slate-400 border border-slate-100">Вік: {patient.age}</span>
           </div>
           <div className="flex flex-col gap-3">
-            <button onClick={() => { setActiveTab('clinical'); setSelectedTest(null); }} className={`flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${activeTab === 'clinical' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-indigo-50 border border-slate-100'}`}>
+            <button onClick={() => { setActiveTab('clinical'); setSelectedTest(null); }} className={`flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${activeTab === 'clinical' ? 'bg-teal-700 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-teal-50 border border-slate-200'}`}>
               <FaFileMedicalAlt className="text-xl" /> Клінічна картина
             </button>
-            <button onClick={() => setActiveTab('chat')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${activeTab === 'chat' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-indigo-50 border border-slate-100'}`}>
+            <button onClick={() => setActiveTab('chat')} className={`flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${activeTab === 'chat' ? 'bg-teal-700 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-teal-50 border border-slate-200'}`}>
               <FaComments className="text-xl" /> Нотатки / Чат
             </button>
           </div>
@@ -259,21 +274,21 @@ export default function PatientProfile() {
             <div className="p-8 animate-fade-in space-y-6 h-full overflow-y-auto max-h-[75vh]">
               {!selectedTest ? (
                 <>
-                  <h3 className="text-2xl font-black text-slate-800 border-b border-slate-100 pb-4 mb-6">Історія тестувань</h3>
+                  <h3 className="text-2xl brand-display font-bold text-slate-800 border-b border-slate-100 pb-4 mb-6">Історія тестувань</h3>
                   {testResults.length === 0 ? (
                     <div className="bg-slate-50 border border-slate-100 p-8 rounded-3xl text-center"><p className="text-slate-500 font-medium">Клієнт ще не проходив тестування.</p></div>
                   ) : (
                     <div className="grid grid-cols-1 gap-4">
                       {testResults.map((test) => (
-                        <div key={test.id} onClick={() => setSelectedTest(test)} className="cursor-pointer bg-white border border-slate-200 p-5 rounded-3xl flex justify-between items-center shadow-sm hover:shadow-md hover:border-indigo-300 transition-all group">
+                        <div key={test.id} onClick={() => setSelectedTest(test)} className="cursor-pointer bg-white border border-slate-200 p-5 rounded-3xl flex justify-between items-center shadow-sm hover:shadow-md hover:border-teal-300 transition-all group">
                           <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-indigo-600 group-hover:text-white transition-colors"><FaFileMedicalAlt /></div>
+                            <div className="w-14 h-14 bg-teal-50 text-teal-700 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-teal-700 group-hover:text-white transition-colors"><FaFileMedicalAlt /></div>
                             <div>
                               <div className="font-black text-slate-800 text-lg md:text-xl">{test.test_type}</div>
                               <div className="text-slate-400 text-xs font-bold mt-1 uppercase tracking-widest">Пройдено: {test.date}</div>
                             </div>
                           </div>
-                          <button className="hidden md:flex items-center gap-2 text-indigo-600 font-bold bg-indigo-50 px-5 py-2.5 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">Відкрити <FaChevronRight className="text-sm" /></button>
+                          <button className="hidden md:flex items-center gap-2 text-teal-700 font-bold bg-teal-50 px-5 py-2.5 rounded-xl group-hover:bg-teal-700 group-hover:text-white transition-colors">Відкрити <FaChevronRight className="text-sm" /></button>
                         </div>
                       ))}
                     </div>
@@ -281,9 +296,9 @@ export default function PatientProfile() {
                 </>
               ) : (
                 <div className="animate-fade-in pb-10">
-                   <button onClick={() => setSelectedTest(null)} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold mb-6 transition-colors bg-slate-50 px-4 py-2 rounded-full border border-slate-100 hover:border-indigo-100"><FaArrowLeft /> До списку тестів</button>
+                   <button onClick={() => setSelectedTest(null)} className="flex items-center gap-2 text-slate-500 hover:text-teal-700 font-bold mb-6 transition-colors bg-slate-50 px-4 py-2 rounded-full border border-slate-200 hover:border-teal-200"><FaArrowLeft /> До списку тестів</button>
                    <div className="border-b border-slate-100 pb-6 mb-6">
-                      <div className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-200 inline-block mb-3">AI ЗВІТ</div>
+                      <div className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-teal-200 inline-block mb-3">AI ЗВІТ</div>
                       <h2 className="text-3xl font-black text-slate-800">{selectedTest.test_type}</h2>
                       <p className="text-slate-500 mt-2 font-medium">Результати від {selectedTest.date}</p>
                    </div>
@@ -294,9 +309,9 @@ export default function PatientProfile() {
           )}
 
           {activeTab === 'chat' && (
-            <div className="flex flex-col h-full animate-fade-in bg-[#e5ddd5] relative">
-              <div className="bg-white px-6 py-4 shadow-sm flex items-center justify-between z-20"><h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><FaComments className="text-indigo-500" /> Захищений чат</h3></div>
-              <div className="flex-grow p-6 overflow-y-auto flex flex-col gap-3 relative z-10" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')", backgroundBlendMode: 'overlay', backgroundColor: '#e5ddd5' }}>
+            <div className="flex flex-col h-full animate-fade-in bg-[#eaf2ee] relative">
+              <div className="bg-white px-6 py-4 shadow-sm border-b border-slate-200 flex items-center justify-between z-20"><h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><FaComments className="text-teal-700" /> Захищений чат</h3></div>
+              <div ref={messagesContainerRef} className="flex-grow p-6 overflow-y-auto flex flex-col gap-3 relative z-10" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')", backgroundBlendMode: 'overlay', backgroundColor: '#eaf2ee' }}>
                 <div className="text-center my-2"><span className="bg-slate-400/20 text-slate-600 text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm">Сьогодні</span></div>
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-slate-500 font-medium text-center bg-white/50 rounded-3xl p-6 mx-auto mt-10 backdrop-blur-sm">Історія порожня.<br/>Напишіть клієнту перше повідомлення.</div>
@@ -305,9 +320,9 @@ export default function PatientProfile() {
                     const isMyMsg = msg.sender_id === myId;
                     return (
                       <div key={msg.id} className={`flex flex-col ${isMyMsg ? 'items-end' : 'items-start'}`}>
-                        <div className={`relative max-w-[85%] md:max-w-[70%] px-4 py-2 text-[15px] shadow-sm flex flex-col ${isMyMsg ? 'bg-indigo-100 text-slate-800 rounded-2xl rounded-tr-sm' : 'bg-white text-slate-800 rounded-2xl rounded-tl-sm'}`}>
+                        <div className={`relative max-w-[85%] md:max-w-[70%] px-4 py-2 text-[15px] shadow-sm flex flex-col ${isMyMsg ? 'bg-teal-100 text-slate-800 rounded-2xl rounded-tr-sm border border-teal-200' : 'bg-white text-slate-800 rounded-2xl rounded-tl-sm'}`}>
                           <span className="pr-10 pb-1">{msg.text}</span>
-                          <span className={`text-[10px] absolute bottom-1 right-2 ${isMyMsg ? 'text-indigo-400' : 'text-slate-400'}`}>{msg.time}</span>
+                          <span className={`text-[10px] absolute bottom-1 right-2 ${isMyMsg ? 'text-teal-700/70' : 'text-slate-400'}`}>{msg.time}</span>
                         </div>
                       </div>
                     )
@@ -316,12 +331,12 @@ export default function PatientProfile() {
                 <div ref={messagesEndRef} />
               </div>
               {showEmoji && <div className="absolute bottom-[80px] left-4 z-30 shadow-2xl animate-fade-in"><EmojiPicker onEmojiClick={onEmojiClick} width={300} height={350} /></div>}
-              <div className="bg-[#f0f2f5] px-4 py-3 flex items-center gap-2 z-20">
-                <button type="button" onClick={() => setShowEmoji(!showEmoji)} className="text-slate-500 hover:text-indigo-600 text-2xl p-2"><FaSmile /></button>
+              <div className="bg-[#f6faf8] border-t border-slate-200 px-4 py-3 flex items-center gap-2 z-20">
+                <button type="button" onClick={() => setShowEmoji(!showEmoji)} className="text-slate-500 hover:text-teal-700 text-2xl p-2"><FaSmile /></button>
                 <form onSubmit={handleSendMessage} className="flex-grow flex items-center">
-                  <input type="text" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} placeholder="Напишіть повідомлення..." className="w-full bg-white border-none rounded-full px-5 py-3 outline-none focus:ring-2 focus:ring-indigo-200 shadow-sm" />
+                  <input type="text" value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} placeholder="Напишіть повідомлення..." className="w-full bg-white border-none rounded-full px-5 py-3 outline-none focus:ring-2 focus:ring-teal-200 shadow-sm" />
                 </form>
-                <button onClick={handleSendMessage} disabled={!chatMessage.trim()} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg ml-2"><FaPaperPlane className="ml-[-2px]" /></button>
+                <button onClick={handleSendMessage} disabled={!chatMessage.trim()} className="bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg ml-2"><FaPaperPlane className="ml-[-2px]" /></button>
               </div>
             </div>
           )}

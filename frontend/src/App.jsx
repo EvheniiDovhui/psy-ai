@@ -1,21 +1,21 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header'; // НАШ НОВИЙ ХЕДЕР
-import Footer from './components/Footer'; // НАШ НОВИЙ ФУТЕР
-import Home from './pages/Home';
-import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import PatientProfile from './pages/PatientProfile';
-import PatientChat from './pages/PatientChat';
-import PrimaryInterview from './pages/PrimaryInterview';
-import UnfinishedSentences from './pages/UnfinishedSentences';
-import BeckTest from './pages/BeckTest';
-import Specialists from './pages/Specialists'; // Імпортуй
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
+import Home from './pages/home/Home';
+import Auth from './pages/auth/Auth';
+import Dashboard from './pages/dashboard/Dashboard';
+import PatientProfile from './pages/profile/PatientProfile';
+import PatientChat from './pages/chat/PatientChat';
+import PrimaryInterview from './pages/tests/PrimaryInterview';
+import UnfinishedSentences from './pages/tests/UnfinishedSentences';
+import BeckTest from './pages/tests/BeckTest';
+import Specialists from './pages/specialists/Specialists';
 
 function App() {
   return (
     <Router>
-      <div className="flex flex-col min-h-screen bg-slate-50">
+      <div className="flex flex-col min-h-screen">
         
         {/* Глобальний хедер (один на весь сайт) */}
         <Header /> 

@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { 
   FaArrowLeft, FaCheckCircle, FaUserMd, FaLock, FaBrain, FaHeartbeat, FaRegCommentDots
 } from 'react-icons/fa';
+import { API_BASE_URL } from '../../lib/config/api';
 
 export default function PrimaryInterview() {
   const navigate = useNavigate();
+  const isDevMode = import.meta.env.DEV;
   const [loading, setLoading] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
   
@@ -38,13 +40,17 @@ export default function PrimaryInterview() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.mood) {
+      alert('Будь ласка, оберіть настрій за останні 7 днів.');
+      return;
+    }
     setLoading(true);
 
     // Додаємо ім'я автоматично, вік ШІ може спробувати зрозуміти з контексту або проігнорувати
     const combinedText = `Клієнт: ${userName}. Настрій: ${formData.mood}. Запит: ${formData.complaint}`;
 
     try {
-      const response = await fetch('http://localhost:8000/api/analyze-interview', {
+      const response = await fetch(`${API_BASE_URL}/api/analyze-interview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: combinedText }),
@@ -81,7 +87,7 @@ export default function PrimaryInterview() {
             ]
         };
 
-        await fetch('http://localhost:8000/api/save-test-result', {
+        await fetch(`${API_BASE_URL}/api/save-test-result`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -104,34 +110,36 @@ export default function PrimaryInterview() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-fade-in mb-20">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 mb-20 pt-24">
       
-      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold mb-4 transition-colors">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-slate-500 hover:text-teal-700 font-bold mb-4 transition-colors">
         <FaArrowLeft /> Повернутися в кабінет
       </button>
 
       {!analysisResults ? (
-        <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-sm border border-slate-100">
+        <div className="glass-surface p-8 md:p-12 rounded-[2.4rem] soft-shadow border border-slate-200">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <FaRegCommentDots className="text-4xl text-indigo-400" />
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900">Привіт, {userName}!</h1>
+                <FaRegCommentDots className="text-4xl text-teal-600" />
+                <h1 className="text-3xl md:text-4xl brand-display font-bold text-slate-900">Привіт, {userName}!</h1>
               </div>
               <p className="text-slate-500 font-medium text-lg ml-12">Розкажіть про свій стан, а штучний інтелект структурує запит для вашого фахівця.</p>
             </div>
-            <button 
-              type="button" 
-              onClick={handleAutoFill}
-              className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-5 py-2.5 rounded-full font-bold text-sm transition-colors whitespace-nowrap"
-            >
-              Автозаповнення
-            </button>
+            {isDevMode && (
+              <button 
+                type="button" 
+                onClick={handleAutoFill}
+                className="text-teal-700 bg-teal-50 hover:bg-teal-100 px-5 py-2.5 rounded-full font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                Автозаповнення
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             
-            <div className="bg-slate-50 p-6 md:p-8 rounded-[2rem] border border-slate-100">
+            <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-200">
                 <label className="flex items-center gap-2 text-sm font-black uppercase text-slate-600 mb-4 tracking-widest">
                     <FaHeartbeat className="text-rose-400 text-xl" /> Настрій за останні 7 днів
                 </label>
@@ -141,7 +149,7 @@ export default function PrimaryInterview() {
                             key={moodOption} 
                             className={`flex items-center justify-center p-4 rounded-2xl cursor-pointer border-2 font-bold transition-all text-center ${
                                 formData.mood === moodOption 
-                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' 
+                              ? 'bg-teal-50 border-teal-600 text-teal-800 shadow-sm' 
                                 : 'bg-white border-transparent text-slate-500 hover:border-slate-200 shadow-sm'
                             }`}
                         >
@@ -151,7 +159,6 @@ export default function PrimaryInterview() {
                                 value={moodOption} 
                                 onChange={handleChange} 
                                 className="hidden" 
-                                required
                             />
                             {moodOption}
                         </label>
@@ -159,9 +166,9 @@ export default function PrimaryInterview() {
                 </div>
             </div>
 
-            <div className="bg-slate-50 p-6 md:p-8 rounded-[2rem] border border-slate-100">
+            <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-200">
               <label className="flex items-center gap-2 text-sm font-black uppercase text-slate-600 mb-4 tracking-widest">
-                <FaBrain className="text-indigo-400 text-xl" /> Що вас турбує?
+                <FaBrain className="text-teal-600 text-xl" /> Що вас турбує?
               </label>
               <textarea 
                 name="complaint" 
@@ -169,7 +176,7 @@ export default function PrimaryInterview() {
                 required 
                 value={formData.complaint} 
                 onChange={handleChange} 
-                className="w-full px-6 py-5 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none resize-none transition-all text-lg text-slate-700 shadow-inner" 
+                className="w-full px-6 py-5 rounded-2xl bg-white border border-slate-200 focus:border-teal-600 focus:ring-4 focus:ring-teal-50 outline-none resize-none transition-all text-lg text-slate-700 shadow-inner" 
                 placeholder="Опишіть свій стан, думки, відчуття в тілі..." 
               />
             </div>
@@ -177,7 +184,7 @@ export default function PrimaryInterview() {
             <button 
               type="submit" 
               disabled={loading || !formData.mood} 
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-black py-5 rounded-2xl text-xl transition-all shadow-md shadow-indigo-200 flex justify-center items-center gap-3 mt-4"
+              className="w-full bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 text-white font-black py-5 rounded-2xl text-xl transition-all shadow-md shadow-teal-900/20 flex justify-center items-center gap-3 mt-4"
             >
               {loading ? (
                 <><div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div> Аналізуємо...</>
@@ -190,33 +197,33 @@ export default function PrimaryInterview() {
       ) : (
         
         /* ВИГЛЯД РЕЗУЛЬТАТІВ ДЛЯ КЛІЄНТА (Безпечний) */
-        <div className="bg-emerald-50 text-emerald-800 p-8 md:p-12 rounded-[3rem] shadow-sm animate-fade-in border border-emerald-100 mt-10">
+        <div className="bg-teal-50 text-teal-900 p-8 md:p-12 rounded-[2.6rem] shadow-sm border border-teal-200 mt-10">
             <div className="flex flex-col items-center text-center mb-8">
-                <div className="w-20 h-20 bg-emerald-500 text-white rounded-full flex items-center justify-center text-4xl shadow-md mb-6 animate-bounce">
+            <div className="w-20 h-20 bg-teal-700 text-white rounded-full flex items-center justify-center text-4xl shadow-md mb-6 animate-bounce">
                     <FaCheckCircle />
                 </div>
                 <h2 className="text-3xl font-black mb-4">Інтерв'ю успішно збережено!</h2>
-                <p className="text-lg font-medium text-emerald-700">Ваш запит структуровано та надіслано до безпечного кабінету вашого фахівця.</p>
+            <p className="text-lg font-medium text-teal-800">Ваш запит структуровано та надіслано до безпечного кабінету вашого фахівця.</p>
             </div>
             
             <div className="bg-white p-6 md:p-8 rounded-3xl text-left shadow-sm border border-emerald-100 mb-8 max-w-2xl mx-auto">
                 <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
-                    <span className="bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Визначений вектор роботи</span>
+                    <span className="bg-teal-100 text-teal-800 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Визначений вектор роботи</span>
                 </div>
                 <p className="text-slate-700 text-lg leading-relaxed font-medium italic">
                     "{analysisResults.core_request || 'Обговорення поточного емоційного стану'}"
                 </p>
                 
-                <div className="mt-8 p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-4">
-                    <FaLock className="text-indigo-400 text-2xl shrink-0 mt-1" />
-                    <p className="text-indigo-700 text-sm font-medium leading-relaxed">
+                <div className="mt-8 p-5 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-4">
+                  <FaLock className="text-amber-700 text-2xl shrink-0 mt-1" />
+                  <p className="text-amber-900 text-sm font-medium leading-relaxed">
                         Детальні клінічні маркери, оцінка емоційної стабільності, соціальної адаптації та розгорнуте психологічне резюме збережені виключно для вашого фахівця.
                     </p>
                 </div>
             </div>
             
             <div className="text-center">
-                <button onClick={() => navigate('/dashboard')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-md">
+                <button onClick={() => navigate('/dashboard')} className="bg-teal-700 hover:bg-teal-800 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-md">
                     Повернутися в кабінет
                 </button>
             </div>

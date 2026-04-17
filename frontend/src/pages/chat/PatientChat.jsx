@@ -3,15 +3,20 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPaperPlane, FaUserMd, FaSmile, FaPaperclip, FaMicrophone, FaEllipsisV } from 'react-icons/fa';
 import EmojiPicker from 'emoji-picker-react'; // Наша нова бібліотека смайлів
+import { API_BASE_URL } from '../../lib/config/api';
 
 export default function PatientChat() {
   const navigate = useNavigate();
   const [assignedPsy, setAssignedPsy] = useState('Завантаження...');
   const [psyId, setPsyId] = useState(null);
+  const [isPsyOnline, setIsPsyOnline] = useState(false);
+  const [lastSeenTime, setLastSeenTime] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [showEmoji, setShowEmoji] = useState(false); // Стейт для панелі емодзі
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const shouldForceScrollRef = useRef(true);
 
   const myId = parseInt(localStorage.getItem('userId'));
 
@@ -20,7 +25,7 @@ export default function PatientChat() {
     
     const email = localStorage.getItem('userEmail');
     if (email) {
-      fetch(`http://localhost:8000/api/my-psychologist/${email}`)
+      fetch(`${API_BASE_URL}/api/my-psychologist/${encodeURIComponent(email)}`)
         .then(res => res.json())
         .then(data => {
           if (data.status === 'success') {
@@ -35,7 +40,7 @@ export default function PatientChat() {
     const fetchMessages = async () => {
       if (!myId || !psyId) return;
       try {
-        const res = await fetch(`http://localhost:8000/api/messages/${myId}/${psyId}`);
+        const res = await fetch(`${API_BASE_URL}/api/messages/${myId}/${psyId}`);
         const data = await res.json();
         if (data.status === 'success') setMessages(data.data);
       } catch (error) { console.error(error); }
@@ -47,8 +52,37 @@ export default function PatientChat() {
   }, [myId, psyId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceFromBottom < 140;
+
+    if (shouldForceScrollRef.current || isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      shouldForceScrollRef.current = false;
+    }
   }, [messages]);
+
+  useEffect(() => {
+    const fetchPresence = async () => {
+      if (!psyId) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/presence/${psyId}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          setIsPsyOnline(!!data.is_online);
+          setLastSeenTime(data.last_seen_time || '');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchPresence();
+    const interval = setInterval(fetchPresence, 15000);
+    return () => clearInterval(interval);
+  }, [psyId]);
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -57,9 +91,10 @@ export default function PatientChat() {
     const textToSend = chatMessage;
     setChatMessage('');
     setShowEmoji(false); // Ховаємо смайли після відправки
+    shouldForceScrollRef.current = true;
     
     try {
-      await fetch('http://localhost:8000/api/messages', {
+      await fetch(`${API_BASE_URL}/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sender_id: myId, receiver_id: psyId, text: textToSend }),
@@ -72,21 +107,23 @@ export default function PatientChat() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto h-[100vh] md:h-[90vh] md:mt-4 flex flex-col bg-[#e5ddd5] md:rounded-[2rem] shadow-2xl overflow-hidden relative border border-slate-200">
+    <div className="max-w-3xl mx-auto pt-24 md:pt-0 h-[100dvh] md:h-[88vh] md:mt-24 flex flex-col bg-[#eaf2ee] md:rounded-[2.2rem] shadow-2xl overflow-hidden relative border border-slate-200">
       
       {/* Шапка чату (Telegram Style) */}
-      <div className="bg-white px-4 py-3 shadow-sm flex items-center justify-between z-20">
+      <div className="glass-surface px-4 py-3 shadow-sm flex items-center justify-between z-20 border-b border-slate-200/70">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/dashboard')} className="text-slate-500 hover:text-emerald-600 text-xl p-2 rounded-full hover:bg-slate-100 transition-all">
+          <button onClick={() => navigate('/dashboard')} className="text-slate-500 hover:text-teal-700 text-xl p-2 rounded-full hover:bg-slate-100 transition-all">
             <FaArrowLeft />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl">
+            <div className="w-10 h-10 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-xl">
               <FaUserMd />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-slate-800 leading-tight">{assignedPsy}</span>
-              <span className="text-emerald-500 text-xs font-medium">в мережі</span>
+              <span className={`text-xs font-medium ${isPsyOnline ? 'text-emerald-600' : 'text-slate-500'}`}>
+                {isPsyOnline ? 'онлайн' : (lastSeenTime ? `офлайн · востаннє ${lastSeenTime}` : 'офлайн')}
+              </span>
             </div>
           </div>
         </div>
@@ -94,7 +131,7 @@ export default function PatientChat() {
       </div>
 
       {/* Вікно повідомлень (з фоном як у месенджерах) */}
-      <div className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 relative z-10" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')", backgroundBlendMode: 'overlay', backgroundColor: '#e5ddd5' }}>
+      <div ref={messagesContainerRef} className="flex-grow p-4 overflow-y-auto flex flex-col gap-3 relative z-10" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')", backgroundBlendMode: 'overlay', backgroundColor: '#eaf2ee' }}>
         
         <div className="text-center my-2">
           <span className="bg-slate-400/20 text-slate-600 text-xs font-bold px-3 py-1 rounded-full backdrop-blur-sm">Сьогодні</span>
@@ -107,12 +144,12 @@ export default function PatientChat() {
               <div 
                 className={`relative max-w-[85%] md:max-w-[70%] px-4 py-2 text-[15px] shadow-sm flex flex-col ${
                   isMyMsg 
-                    ? 'bg-[#dcf8c6] text-slate-800 rounded-2xl rounded-tr-sm' // WhatsApp/Telegram Green для своїх
+                    ? 'bg-teal-100 text-slate-800 rounded-2xl rounded-tr-sm border border-teal-200'
                     : 'bg-white text-slate-800 rounded-2xl rounded-tl-sm'    // Білий для чужих
                 }`}
               >
                 <span className="pr-10 pb-1">{msg.text}</span>
-                <span className={`text-[10px] absolute bottom-1 right-2 ${isMyMsg ? 'text-emerald-600/70' : 'text-slate-400'}`}>
+                <span className={`text-[10px] absolute bottom-1 right-2 ${isMyMsg ? 'text-teal-700/70' : 'text-slate-400'}`}>
                   {msg.time}
                 </span>
               </div>
@@ -130,11 +167,11 @@ export default function PatientChat() {
       )}
 
       {/* Форма вводу (Telegram Style) */}
-      <div className="bg-[#f0f2f5] px-4 py-3 flex items-center gap-2 z-20">
+      <div className="bg-[#f6faf8] border-t border-slate-200 px-4 py-3 flex items-center gap-2 z-20">
         <button 
           type="button" 
           onClick={() => setShowEmoji(!showEmoji)}
-          className="text-slate-500 hover:text-emerald-600 text-2xl p-2 transition-colors"
+          className="text-slate-500 hover:text-teal-700 text-2xl p-2 transition-colors"
         >
           <FaSmile />
         </button>
@@ -148,14 +185,14 @@ export default function PatientChat() {
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
             placeholder="Повідомлення" 
-            className="w-full bg-white border-none rounded-full px-5 py-3 outline-none focus:ring-2 focus:ring-emerald-200 transition-all text-slate-700 shadow-sm"
+            className="w-full bg-white border-none rounded-full px-5 py-3 outline-none focus:ring-2 focus:ring-teal-200 transition-all text-slate-700 shadow-sm"
           />
         </form>
 
         {chatMessage.trim() ? (
           <button 
             onClick={handleSendMessage}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm transition-all animate-fade-in"
+            className="bg-teal-700 hover:bg-teal-800 text-white w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm transition-all animate-fade-in"
           >
             <FaPaperPlane className="ml-[-2px]" />
           </button>
