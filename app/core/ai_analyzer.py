@@ -1,6 +1,7 @@
 # app/core/ai_analyzer.py
 import json
 import os
+import time
 from dotenv import load_dotenv
 
 try:
@@ -8,10 +9,21 @@ try:
 except Exception:
     genai = None
 
-load_dotenv()
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_THIS_DIR))
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
-MODEL_ID = os.getenv("GEMINI_MODEL_ID", "models/gemini-2.0-flash")
+MODEL_ID = os.getenv("GEMINI_MODEL_ID", "models/gemini-2.5-flash")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+FALLBACK_MODELS = [MODEL_ID, "models/gemini-2.5-flash"]
+AI_VERBOSE_LOGS = os.getenv("AI_VERBOSE_LOGS", "0") == "1"
+
+
+def _short_error_message(error: Exception, max_len: int = 220) -> str:
+    text = str(error).replace("\n", " ").strip()
+    if len(text) > max_len:
+        return text[:max_len] + "..."
+    return text
 
 # Безпечна ініціалізація клієнта: якщо ключа немає або SDK недоступний,
 # повертаємо fallback-аналітику замість падіння API.
@@ -32,6 +44,38 @@ def _keyword_hits(text: str, keywords):
     return sum(1 for key in keywords if key in lowered)
 
 
+def _build_local_conclusion(neuroticism: int, extraversion: int, openness: int, agreeableness: int, conscientiousness: int):
+    stress_part = "помірний емоційний фон"
+    if neuroticism >= 4:
+        stress_part = "підвищена емоційна напруга та чутливість до стресу"
+    elif neuroticism <= 2:
+        stress_part = "відносно стабільний емоційний фон"
+
+    social_part = "баланс між потребою в автономії та контакті"
+    if extraversion >= 4:
+        social_part = "виражена орієнтація на соціальну взаємодію"
+    elif extraversion <= 2:
+        social_part = "схильність до стриманості та внутрішнього опрацювання"
+
+    growth_part = "помірний потенціал до змін"
+    if openness >= 4 and conscientiousness >= 4:
+        growth_part = "високий потенціал до розвитку та системних змін"
+    elif openness <= 2:
+        growth_part = "орієнтація на перевірені стратегії та передбачуваність"
+
+    relation_part = "нейтральний стиль взаємодії"
+    if agreeableness >= 4:
+        relation_part = "доброжичливий кооперативний стиль взаємодії"
+    elif agreeableness <= 2:
+        relation_part = "більш критичний і дистанційний стиль взаємодії"
+
+    return (
+        "Локальний AI-профіль: "
+        f"{stress_part}; {social_part}; {growth_part}; {relation_part}. "
+        "Рекомендовано підтвердити висновки на клінічній сесії для персоналізованого плану терапії."
+    )
+
+
 def _fallback_sachs_profile(text: str):
     hits_distress = _keyword_hits(text, ["тривог", "страх", "втом", "безсил", "смут", "депрес", "самот"])
     hits_social = _keyword_hits(text, ["друг", "родин", "підтрим", "спілку", "довір"])
@@ -42,6 +86,14 @@ def _fallback_sachs_profile(text: str):
     openness = clamp(3 + (1 if hits_growth >= 2 else 0), 1, 5)
     conscientiousness = clamp(3 + (1 if hits_growth >= 3 else 0), 1, 5)
     agreeableness = clamp(3 + (1 if hits_social >= 3 else 0), 1, 5)
+
+    conclusion = _build_local_conclusion(
+        neuroticism,
+        extraversion,
+        openness,
+        agreeableness,
+        conscientiousness,
+    )
 
     return {
         "big_five": {
@@ -70,7 +122,8 @@ def _fallback_sachs_profile(text: str):
             "conformity": 3,
             "tradition": 3,
         },
-        "conclusion": "Попередній автоматичний аналіз виконано без зовнішнього AI. Рекомендована додаткова клінічна інтерпретація фахівця.",
+        "conclusion": conclusion,
+        "analysis_source": "local-fallback",
     }
 
 
@@ -146,10 +199,86 @@ def clean_ai_json(raw_text):
             text = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:
             text = text.split("```")[1].split("```")[0].strip()
-        return json.loads(text)
+
+        # 1) Стандартний випадок: відповідь одразу валідний JSON.
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        # 2) Пошук першого JSON-об'єкта всередині змішаного тексту.
+        start = text.find("{")
+        if start != -1:
+            depth = 0
+            in_string = False
+            escaped = False
+            for idx in range(start, len(text)):
+                ch = text[idx]
+                if in_string:
+                    if escaped:
+                        escaped = False
+                    elif ch == "\\":
+                        escaped = True
+                    elif ch == '"':
+                        in_string = False
+                    continue
+
+                if ch == '"':
+                    in_string = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[start : idx + 1]
+                        return json.loads(candidate)
+
+        raise ValueError("JSON object not found in model response")
     except Exception as e:
         print(f"❌ Помилка парсингу JSON: {e}\nОтримано текст: {raw_text[:100]}...")
         return None
+
+
+def _generate_content_with_model_fallback(prompt: str):
+    if not client:
+        return None
+
+    tried = set()
+    last_error = None
+
+    for model in FALLBACK_MODELS:
+        if not model or model in tried:
+            continue
+        tried.add(model)
+        for attempt in range(3):
+            try:
+                return client.models.generate_content(model=model, contents=prompt)
+            except Exception as e:
+                last_error = e
+                message = str(e).upper()
+                is_transient = (
+                    "UNAVAILABLE" in message
+                    or "503" in message
+                    or "INTERNAL" in message
+                    or "DEADLINE_EXCEEDED" in message
+                )
+
+                if AI_VERBOSE_LOGS:
+                    print(
+                        f"⚠️ GEMINI model issue ({model}, attempt {attempt + 1}/3): "
+                        f"{_short_error_message(e)}"
+                    )
+
+                if not is_transient or attempt == 2:
+                    break
+
+                # Короткий backoff для тимчасових збоїв сервісу.
+                time.sleep(0.6 * (attempt + 1))
+
+    if last_error:
+        raise last_error
+
+    return None
 
 def analyze_text_with_gemini(text: str):
     """Для тесту Сакса-Леві"""
@@ -177,12 +306,92 @@ def analyze_text_with_gemini(text: str):
         return _fallback_sachs_profile(text)
 
     try:
-        response = client.models.generate_content(model=MODEL_ID, contents=prompt)
+        response = _generate_content_with_model_fallback(prompt)
+        if not response:
+            return _fallback_sachs_profile(text)
         parsed = clean_ai_json(response.text)
         return parsed or _fallback_sachs_profile(text)
     except Exception as e:
-        print(f"🔥 SACHS AI ERROR: {e}")
+        if AI_VERBOSE_LOGS:
+            print(f"SACHS AI fallback: {_short_error_message(e)}")
         return _fallback_sachs_profile(text)
+
+
+def analyze_full_profile_with_gemini(combined_context: str):
+    """Розширений AI-аналіз цілісного психологічного профілю клієнта."""
+    prompt = f"""
+    Ти — клінічний психолог-супервізор. У тебе є агрегований контекст по клієнту з кількох методик.
+    Зроби цілісний професійний профіль особистості.
+
+    КОНТЕКСТ КЛІЄНТА:
+    "{combined_context}"
+
+    ВИМОГИ:
+    1. Оціни узагальнений профіль за шкалами 1-5:
+       - Big Five: neuroticism, extraversion, openness, agreeableness, conscientiousness
+       - Maslow: physiological, safety, love, esteem, self_actualization
+       - Schwartz: power, achievement, hedonism, security, benevolence, universalism,
+         self_direction, stimulation, conformity, tradition
+    2. Напиши глибоке узагальнене резюме (conclusion), де є:
+       - ключові сильні сторони
+       - ключові зони вразливості
+       - міжособистісний стиль
+    3. Дай клінічні інсайти для психолога:
+       - therapeutic_focus: 3-5 пріоритетів роботи
+       - recommendations: 5 практичних рекомендацій
+
+    ПОВЕРНИ ТІЛЬКИ JSON (без markdown):
+    {{
+      "big_five": {{"neuroticism": 1-5, "extraversion": 1-5, "openness": 1-5, "agreeableness": 1-5, "conscientiousness": 1-5}},
+      "maslow": {{"physiological": 1-5, "safety": 1-5, "love": 1-5, "esteem": 1-5, "self_actualization": 1-5}},
+      "schwartz": {{"power": 1-5, "achievement": 1-5, "hedonism": 1-5, "security": 1-5, "benevolence": 1-5, "universalism": 1-5, "self_direction": 1-5, "stimulation": 1-5, "conformity": 1-5, "tradition": 1-5}},
+      "conclusion": "...",
+      "therapeutic_focus": ["..."],
+      "recommendations": ["..."]
+    }}
+    """
+
+    if not client:
+        fallback = _fallback_sachs_profile(combined_context)
+        fallback["therapeutic_focus"] = [
+            "Зниження емоційного дистресу",
+            "Стабілізація щоденного режиму і ресурсності",
+            "Посилення соціальної підтримки",
+        ]
+        fallback["recommendations"] = [
+            "Вести короткий щоденник стану 1 раз на день",
+            "Використовувати техніки дихання при піках тривоги",
+            "Планувати щоденні малі досяжні цілі",
+            "Фіксувати тригери та автоматичні думки",
+            "Проводити щотижневий перегляд динаміки з психологом",
+        ]
+        return fallback
+
+    try:
+        response = _generate_content_with_model_fallback(prompt)
+        if not response:
+            return _fallback_sachs_profile(combined_context)
+        parsed = clean_ai_json(response.text)
+        if parsed:
+            return parsed
+    except Exception as e:
+        if AI_VERBOSE_LOGS:
+            print(f"FULL PROFILE AI fallback: {_short_error_message(e)}")
+
+    fallback = _fallback_sachs_profile(combined_context)
+    fallback["therapeutic_focus"] = [
+        "Зниження емоційного дистресу",
+        "Розвиток саморегуляції",
+        "Поступове посилення адаптаційних стратегій",
+    ]
+    fallback["recommendations"] = [
+        "Моніторити сон і рівень втоми щодня",
+        "Додавати короткі відновлювальні паузи вдень",
+        "Опрацьовувати мисленнєві викривлення у щоденнику",
+        "Фіксувати позитивні дії та досягнення",
+        "Обговорювати прогрес і бар'єри на сесіях",
+    ]
+    return fallback
 
 def analyze_interview_with_gemini(text: str):
     """Для Первинного інтерв'ю"""
@@ -206,11 +415,14 @@ def analyze_interview_with_gemini(text: str):
         return _fallback_interview_profile(text)
 
     try:
-        response = client.models.generate_content(model=MODEL_ID, contents=prompt)
+        response = _generate_content_with_model_fallback(prompt)
+        if not response:
+            return _fallback_interview_profile(text)
         parsed = clean_ai_json(response.text)
         return parsed or _fallback_interview_profile(text)
     except Exception as e:
-        print(f"🔥 INTERVIEW AI ERROR: {e}")
+        if AI_VERBOSE_LOGS:
+            print(f"INTERVIEW AI fallback: {_short_error_message(e)}")
         return _fallback_interview_profile(text)
 
 def analyze_beck_with_gemini(total_score: int, answers_text: str):
@@ -239,9 +451,12 @@ def analyze_beck_with_gemini(total_score: int, answers_text: str):
         return _fallback_beck_analysis(total_score)
 
     try:
-        response = client.models.generate_content(model=MODEL_ID, contents=prompt)
+        response = _generate_content_with_model_fallback(prompt)
+        if not response:
+            return _fallback_beck_analysis(total_score)
         parsed = clean_ai_json(response.text)
         return parsed or _fallback_beck_analysis(total_score)
     except Exception as e:
-        print(f"🔥 BECK AI ERROR: {e}")
+        if AI_VERBOSE_LOGS:
+            print(f"BECK AI fallback: {_short_error_message(e)}")
         return _fallback_beck_analysis(total_score)

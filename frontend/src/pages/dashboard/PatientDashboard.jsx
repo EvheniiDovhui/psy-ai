@@ -5,7 +5,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../lib/config/api';
 import { 
   FaUserEdit, FaCamera, FaTimes, FaComments, 
-  FaClipboardList, FaPenFancy, FaListOl, FaArrowRight, FaUserMd, FaExclamationCircle
+  FaClipboardList, FaPenFancy, FaListOl, FaArrowRight, FaUserMd, FaExclamationCircle, FaShieldAlt
 } from 'react-icons/fa';
 
 const PSY_COLOR_VARIANTS = [
@@ -148,7 +148,7 @@ export default function PatientDashboard() {
           
           <div className="flex items-center justify-between border-b border-slate-200/60 pb-4">
             <h2 className="text-2xl brand-display font-bold text-slate-800">Доступна діагностика</h2>
-            <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold border border-teal-200">3 тести</span>
+            <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold border border-teal-200">4 тести</span>
           </div>
 
           {/* ЯКЩО ЛІКАР НЕ ОБРАНИЙ - ПОПЕРЕДЖЕННЯ */}
@@ -182,6 +182,13 @@ export default function PatientDashboard() {
               <h3 className="text-xl font-black text-slate-800 mb-2">Шкала депресії Бека</h3>
               <p className="text-slate-500 text-sm font-medium mb-6">Глибока оцінка вашого емоційного стану за стандартизованою методикою (21 питання).</p>
               <span className="text-rose-600 font-bold flex items-center gap-2 mt-auto">Пройти тест <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></span>
+            </div>
+
+            <div onClick={() => navigate('/coping')} className="cursor-pointer group bg-white rounded-[2.3rem] p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-cyan-300 transition-all flex flex-col items-start md:col-span-2">
+              <div className="w-14 h-14 bg-cyan-50 text-cyan-700 rounded-2xl flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform"><FaShieldAlt /></div>
+              <h3 className="text-xl font-black text-slate-800 mb-2">Індикатор копінг-стратегій</h3>
+              <p className="text-slate-500 text-sm font-medium mb-6">Діагностика домінуючої стратегії подолання стресу: вирішення проблем, соціальна підтримка або уникнення.</p>
+              <span className="text-cyan-700 font-bold flex items-center gap-2 mt-auto">Пройти тест <FaArrowRight className="group-hover:translate-x-1 transition-transform" /></span>
             </div>
           </div>
         </div>

@@ -31,6 +31,7 @@ export default function Footer() {
             <li><a href="/primary-interview" className="hover:text-teal-300 transition-colors">Первинне інтерв'ю</a></li>
             <li><a href="/sentences" className="hover:text-teal-300 transition-colors">Незакінчені речення</a></li>
             <li><a href="/beck" className="hover:text-teal-300 transition-colors">Шкала Бека</a></li>
+            <li><a href="/coping" className="hover:text-teal-300 transition-colors">Індикатор копінг-стратегій</a></li>
           </ul>
         </div>
 

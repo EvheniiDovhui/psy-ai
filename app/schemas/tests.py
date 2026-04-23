@@ -22,6 +22,10 @@ class BeckPayload(BaseModel):
     answers_summary: str
 
 
+class CopingPayload(BaseModel):
+    answers: List[int]
+
+
 class TestResultCreate(BaseModel):
     user_id: int
     test_type: str

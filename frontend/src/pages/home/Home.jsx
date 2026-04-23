@@ -1,6 +1,6 @@
 // src/pages/Home.jsx
 import { useNavigate } from 'react-router-dom';
-import { FaArrowRight, FaBolt, FaBrain, FaChartLine, FaCheckCircle, FaClipboardList, FaListUl, FaLock, FaPenFancy } from 'react-icons/fa';
+import { FaArrowRight, FaBolt, FaBrain, FaChartLine, FaCheckCircle, FaClipboardList, FaListUl, FaLock, FaPenFancy, FaShieldAlt } from 'react-icons/fa';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -26,6 +26,13 @@ export default function Home() {
       description: "Стандартизована оцінка депресивної симптоматики для об'єктивного моніторингу.",
       tag: "Клінічна точність",
       path: '/beck',
+    },
+    {
+      icon: <FaShieldAlt size={28} />,
+      title: "Копінг-стратегії",
+      description: "Діагностика домінуючого стилю подолання стресу: вирішення проблем, підтримка або уникнення.",
+      tag: "Стрес-профіль",
+      path: '/coping',
     }
   ];
 
@@ -109,7 +116,7 @@ export default function Home() {
           <h2 className="brand-display text-3xl md:text-5xl font-bold text-slate-900">Методики, які працюють в парі з фахівцем</h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {tests.map((test, index) => (
             <button
               key={test.title}

@@ -5,7 +5,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../../lib/config/api';
 import { 
   FaUserInjured, FaArrowRight, FaUserEdit, FaCamera, 
-  FaTimes, FaPlus, FaCheck, FaRegEnvelope, FaBriefcase, FaBrain
+  FaTimes, FaPlus, FaCheck, FaRegEnvelope, FaBriefcase, FaBrain, FaMicrophone
 } from 'react-icons/fa';
 
 export default function PsychologistDashboard() {
@@ -116,6 +116,19 @@ export default function PsychologistDashboard() {
                 </div>
               </div>
               <p className="text-sm text-slate-500 font-medium mt-4">Аналізатор тестів готовий до роботи.</p>
+            </div>
+
+            <div className="bg-cyan-50 border border-cyan-200 rounded-[2.5rem] p-8 shadow-sm sm:col-span-2 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-cyan-800 font-black text-xl mb-1">AI-асистент живої сесії</h3>
+                <p className="text-cyan-900/80 font-medium text-sm">Транскрипція голосу психолога і клієнта в реальному часі + миттєві інсайти.</p>
+              </div>
+              <button
+                onClick={() => navigate('/live-session')}
+                className="bg-cyan-700 hover:bg-cyan-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors shadow-md"
+              >
+                <FaMicrophone /> Відкрити сесію
+              </button>
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { 
   FaBolt, FaBell, FaUserCircle, FaChevronDown, FaSignOutAlt, 
-  FaTasks, FaSignInAlt, FaUserMd, FaEnvelopeOpen 
+  FaTasks, FaSignInAlt, FaUserMd, FaEnvelopeOpen, FaShieldAlt 
 } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
 
@@ -49,6 +49,10 @@ export default function Header() {
     };
 
     const loadNotifications = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+
       setIsNotifLoading(true);
       try {
         if (userRole === 'patient') {
@@ -136,7 +140,19 @@ export default function Header() {
 
     loadNotifications();
     const interval = setInterval(loadNotifications, 15000);
-    return () => clearInterval(interval);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isAuthenticated, userRole]);
 
   const handleLogout = () => {
@@ -191,6 +207,10 @@ export default function Header() {
                     <Link to="/beck" className="flex items-center gap-3 p-3 rounded-xl hover:bg-teal-50 text-slate-700 hover:text-teal-800 font-semibold text-sm transition-colors">
                       <div className="w-8 h-8 bg-teal-50 text-teal-700 rounded-lg flex items-center justify-center"><FaTasks size={14} /></div>
                       Шкала Бека
+                    </Link>
+                    <Link to="/coping" className="flex items-center gap-3 p-3 rounded-xl hover:bg-teal-50 text-slate-700 hover:text-teal-800 font-semibold text-sm transition-colors">
+                      <div className="w-8 h-8 bg-teal-50 text-teal-700 rounded-lg flex items-center justify-center"><FaShieldAlt size={14} /></div>
+                      Копінг-стратегії
                     </Link>
                   </div>
                 </Motion.div>
