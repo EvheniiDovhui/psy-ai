@@ -128,25 +128,6 @@ export default function ResultsDisplay({ metrics, profile }) {
               "{profile.conclusion}"
             </p>
           </div>
-
-          {/* Направлення до психолога */}
-          <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-10 rounded-[3rem] shadow-2xl text-white flex flex-col md:flex-row items-center gap-8 border-4 border-white/20">
-            <div className="bg-white/10 p-6 rounded-3xl backdrop-blur-md">
-              <FaUserMd className="text-6xl text-teal-100" />
-            </div>
-            <div className="flex-grow text-center md:text-left space-y-2">
-              <h4 className="text-2xl font-black">Бажаєте глибшого розбору?</h4>
-              <p className="text-teal-50 text-lg opacity-90 max-w-xl">
-                Цей аналіз є автоматизованим і базується на алгоритмах. Справжня терапія починається з живого спілкування. Зверніться до фахівця, щоб отримати професійну підтримку.
-              </p>
-            </div>
-            <button 
-              onClick={() => window.open('https://t.me/Psy_support_bot', '_blank')}
-              className="bg-white text-teal-700 font-black py-5 px-10 rounded-2xl hover:bg-teal-50 transition-all shadow-xl flex items-center gap-3 group"
-            >
-              Знайти психолога <FaExternalLinkAlt className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
         </div>
       )}
     </div>
