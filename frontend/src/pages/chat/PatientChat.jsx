@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../lib/config/api';
 export default function PatientChat() {
   const navigate = useNavigate();
   const [assignedPsy, setAssignedPsy] = useState('Завантаження...');
+  const [psychologists, setPsychologists] = useState([]);
   const [psyId, setPsyId] = useState(null);
   const [isPsyOnline, setIsPsyOnline] = useState(false);
   const [lastSeenTime, setLastSeenTime] = useState('');
@@ -25,16 +26,39 @@ export default function PatientChat() {
     
     const email = localStorage.getItem('userEmail');
     if (email) {
-      fetch(`${API_BASE_URL}/api/my-psychologist/${encodeURIComponent(email)}`)
+      fetch(`${API_BASE_URL}/api/my-psychologists/${encodeURIComponent(email)}`)
         .then(res => res.json())
         .then(data => {
-          if (data.status === 'success') {
-            setAssignedPsy(data.psychologist_name);
-            setPsyId(data.psychologist_id);
+          const list = Array.isArray(data.data) ? data.data : [];
+          if (data.status === 'success' && list.length) {
+            setPsychologists(list);
+
+            const preferredId = Number(localStorage.getItem('assignedPsyId') || 0);
+            const selected = list.find((item) => item.psychologist_id === preferredId) || list[0];
+
+            setAssignedPsy(selected.psychologist_name);
+            setPsyId(selected.psychologist_id);
+            localStorage.setItem('assignedPsyId', String(selected.psychologist_id));
+          } else {
+            setAssignedPsy('Фахівця не призначено');
+            setPsyId(null);
+            setPsychologists([]);
           }
-        })
+        });
     }
   }, [navigate]);
+
+  const handleChangePsychologist = (nextId) => {
+    const selectedId = Number(nextId);
+    const selected = psychologists.find((item) => item.psychologist_id === selectedId);
+    if (!selected) return;
+
+    setAssignedPsy(selected.psychologist_name);
+    setPsyId(selected.psychologist_id);
+    localStorage.setItem('assignedPsyId', String(selected.psychologist_id));
+    shouldForceScrollRef.current = true;
+    setMessages([]);
+  };
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -127,6 +151,19 @@ export default function PatientChat() {
             </div>
           </div>
         </div>
+        {psychologists.length > 1 && (
+          <select
+            value={psyId || ''}
+            onChange={(e) => handleChangePsychologist(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none"
+          >
+            {psychologists.map((psy) => (
+              <option key={psy.psychologist_id} value={psy.psychologist_id}>
+                {psy.psychologist_name}
+              </option>
+            ))}
+          </select>
+        )}
         <button className="text-slate-400 hover:text-slate-600 p-2"><FaEllipsisV /></button>
       </div>
 

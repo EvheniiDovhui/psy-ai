@@ -5,9 +5,11 @@ import {
   FaArrowLeft, FaCheckCircle, FaUserMd, FaLock, FaBrain, FaHeartbeat, FaRegCommentDots
 } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 export default function PrimaryInterview() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const isDevMode = import.meta.env.DEV;
   const [loading, setLoading] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
@@ -41,7 +43,11 @@ export default function PrimaryInterview() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.mood) {
-      alert('Будь ласка, оберіть настрій за останні 7 днів.');
+      openModal({
+        tone: 'info',
+        title: 'Потрібна відповідь',
+        message: 'Будь ласка, оберіть настрій за останні 7 днів.',
+      });
       return;
     }
     setLoading(true);
@@ -103,7 +109,11 @@ export default function PrimaryInterview() {
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
     } catch (error) {
       console.error(error);
-      alert('Не вдалося отримати аналіз AI. Перевірте підключення.');
+      openModal({
+        tone: 'error',
+        title: 'Помилка аналізу',
+        message: 'Не вдалося отримати аналіз AI. Перевірте підключення.',
+      });
     } finally {
       setLoading(false);
     }

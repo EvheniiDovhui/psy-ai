@@ -13,11 +13,14 @@ import UnfinishedSentences from './pages/tests/UnfinishedSentences';
 import BeckTest from './pages/tests/BeckTest';
 import CopingStrategiesTest from './pages/tests/CopingStrategiesTest';
 import Specialists from './pages/specialists/Specialists';
+import AppModal from './components/common/AppModal';
+import { ModalProvider } from './lib/modal/ModalContext';
 
 function App() {
   return (
-    <Router>
-      <div className="flex flex-col min-h-screen">
+    <ModalProvider>
+      <Router>
+        <div className="flex flex-col min-h-screen">
         
         {/* Глобальний хедер (один на весь сайт) */}
         <Header /> 
@@ -42,10 +45,12 @@ function App() {
         </main>
 
         {/* Глобальний футер */}
-        <Footer />
+          <Footer />
+          <AppModal />
         
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </ModalProvider>
   );
 }
 

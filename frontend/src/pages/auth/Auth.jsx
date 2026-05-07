@@ -6,9 +6,11 @@ import {
   FaPhone, FaCalendarAlt, FaEye, FaEyeSlash, FaExclamationCircle
 } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const [isLogin, setIsLogin] = useState(true);
   
   const [showPass, setShowPass] = useState(false);
@@ -45,7 +47,11 @@ export default function Auth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isLogin && !isValidToSubmit) {
-      alert("Будь ласка, перевірте правильність введених даних.");
+      openModal({
+        tone: 'error',
+        title: 'Некоректні дані',
+        message: 'Будь ласка, перевірте правильність введених даних.',
+      });
       return;
     }
     
@@ -89,7 +95,11 @@ export default function Auth() {
 
     } catch (error) {
       console.error(error);
-      alert(error.message);
+      openModal({
+        tone: 'error',
+        title: 'Помилка авторизації',
+        message: error.message || 'Не вдалося виконати запит. Спробуйте ще раз.',
+      });
     } finally {
       setLoading(false); // І це теж відпрацює ідеально
     }

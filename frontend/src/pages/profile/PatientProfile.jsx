@@ -93,8 +93,9 @@ export default function PatientProfile() {
   const onEmojiClick = (emojiObject) => setChatMessage(prev => prev + emojiObject.emoji);
 
   const handleLoadFullProfile = async (forceRefresh = false) => {
+    setActiveTab('full-profile');
+
     if (fullProfile && !forceRefresh) {
-      setActiveTab('full-profile');
       return;
     }
 
@@ -115,6 +116,66 @@ export default function PatientProfile() {
     } finally {
       setFullProfileLoading(false);
     }
+  };
+
+  const asNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const traitLabel = (score, max = 5) => {
+    const normalized = asNumber(score) / max;
+    if (normalized >= 0.8) return 'Високий';
+    if (normalized >= 0.5) return 'Помірний';
+    return 'Низький';
+  };
+
+  const renderTraitSection = (title, items, data, tone = 'teal') => {
+    const tones = {
+      teal: {
+        card: 'bg-teal-50 border-teal-200',
+        bar: 'bg-teal-600',
+        text: 'text-teal-800',
+      },
+      amber: {
+        card: 'bg-amber-50 border-amber-200',
+        bar: 'bg-amber-600',
+        text: 'text-amber-900',
+      },
+      slate: {
+        card: 'bg-slate-50 border-slate-200',
+        bar: 'bg-slate-700',
+        text: 'text-slate-800',
+      },
+    };
+
+    const style = tones[tone] || tones.teal;
+
+    return (
+      <div className={`rounded-[2rem] border p-6 ${style.card}`}>
+        <h4 className={`text-lg font-black mb-4 ${style.text}`}>{title}</h4>
+        <div className="space-y-4">
+          {items.map((item) => {
+            const score = asNumber(data?.[item.key], 0);
+            const percent = Math.max(0, Math.min(100, (score / 5) * 100));
+
+            return (
+              <div key={item.key}>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-slate-700 font-bold text-sm">{item.label}</span>
+                  <span className="text-slate-500 font-black text-xs uppercase tracking-wider">
+                    {traitLabel(score)} · {score}/5
+                  </span>
+                </div>
+                <div className="h-2.5 bg-white/80 rounded-full overflow-hidden border border-white/70">
+                  <div className={`h-full rounded-full ${style.bar}`} style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const renderRawAnswers = (rawAnswers) => {
@@ -141,6 +202,79 @@ export default function PatientProfile() {
     try {
       const parsed = JSON.parse(test.ai_response);
       const rawAnswersBlock = renderRawAnswers(parsed.raw_answers);
+
+      // ==========================================================
+      // СПЕЦІАЛЬНИЙ ДИЗАЙН: ІНДИКАТОР КОПІНГ-СТРАТЕГІЙ
+      // ==========================================================
+      if (test.test_type === 'Індикатор копінг-стратегій' && parsed.profile) {
+        const dominant = parsed.profile['Домінуюча стратегія'] || 'Невідомо';
+        const interpretation = parsed.profile['Інтерпретація'] || '';
+        const recs = parsed.profile['Рекомендації'] || [];
+        const levels = [
+          {
+            label: 'Вирішення проблем',
+            value: parsed.profile['Рівень: Вирішення проблем'] || 'Невідомо',
+            score: parsed.profile['Бали: Вирішення проблем'],
+          },
+          {
+            label: 'Соціальна підтримка',
+            value: parsed.profile['Рівень: Соціальна підтримка'] || 'Невідомо',
+            score: parsed.profile['Бали: Соціальна підтримка'],
+          },
+          {
+            label: 'Уникнення',
+            value: parsed.profile['Рівень: Уникнення'] || 'Невідомо',
+            score: parsed.profile['Бали: Уникнення'],
+          },
+        ];
+
+        const sourceLabel = parsed.profile.analysis_source === 'gemini'
+          ? 'AI-інтерпретація для психолога'
+          : 'Структурована клінічна інтерпретація';
+
+        return (
+          <div className="animate-fade-in pb-10 space-y-6 mt-6">
+            <div className="bg-teal-50 p-8 rounded-[2.5rem] border border-teal-200 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-teal-700 mb-3">{sourceLabel}</p>
+              <h3 className="text-3xl font-black text-slate-900 mb-4">{dominant}</h3>
+              <p className="text-slate-700 text-lg leading-relaxed font-medium max-w-4xl">{interpretation}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {levels.map((item) => (
+                <div key={item.label} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                  <h4 className="text-sm font-black text-teal-700 uppercase tracking-widest mb-3">{item.label}</h4>
+                  <div className="flex items-end gap-3 mb-3">
+                    <span className="text-3xl font-black text-slate-900">{item.value}</span>
+                    {typeof item.score === 'number' && (
+                      <span className="text-slate-400 font-bold">{item.score}/22</span>
+                    )}
+                  </div>
+                  <p className="text-slate-600 font-medium leading-relaxed">
+                    Це відображає вираженість відповідної копінг-стратегії у поточному профілі.
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+              <h4 className="text-sm font-black text-teal-700 uppercase tracking-widest mb-4">Клінічні рекомендації</h4>
+              <div className="flex flex-col gap-3">
+                {Array.isArray(recs) && recs.length > 0 ? recs.map((rec, i) => (
+                  <div key={i} className="flex gap-3">
+                    <span className="text-teal-700 font-black mt-1">•</span>
+                    <span className="text-slate-700 font-medium leading-relaxed">{rec}</span>
+                  </div>
+                )) : (
+                  <p className="text-slate-600 font-medium leading-relaxed">Рекомендації не збережені в структурованому форматі.</p>
+                )}
+              </div>
+            </div>
+
+            {rawAnswersBlock}
+          </div>
+        );
+      }
 
       // ==========================================================
       // СПЕЦІАЛЬНИЙ ДИЗАЙН: ШКАЛА БЕКА (З ГРАФІКОМ)
@@ -180,6 +314,7 @@ export default function PatientProfile() {
               </div>
 
               {/* Індикатор тяжкості (Progress Bar) */}
+
               <div className="h-5 w-full bg-white/60 rounded-full overflow-hidden mt-6 shadow-inner relative">
                 <div className={`absolute top-0 left-0 h-full ${colorClass} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${percentage}%` }}></div>
               </div>
@@ -382,40 +517,53 @@ export default function PatientProfile() {
 
           {activeTab === 'full-profile' && (
             <div className="p-8 animate-fade-in space-y-6 h-full overflow-y-auto max-h-[75vh]">
-              {fullProfile?.ai?.source === 'local-fallback' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 font-medium">
-                  Зараз використано локальний fallback-профіль через ліміт/недоступність зовнішнього AI.
-                </div>
-              )}
+              <div className="rounded-[2.2rem] p-6 md:p-8 border border-[#c8e3df] bg-gradient-to-br from-[#e8fbf6] via-[#f2fcfa] to-[#eef3ff]">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.2em] font-black text-[#0f766e] mb-2">Повний AI-профіль</p>
+                    <h3 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">Клінічний meta-profile клієнта</h3>
+                    <p className="text-slate-600 font-medium mt-3 max-w-3xl">
+                      Узагальнення останніх проходжень по кожній методиці з акцентом на терапевтичні рішення.
+                    </p>
+                  </div>
 
-              {fullProfile?.ai?.cached && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-700 font-medium">
-                  Показано кешований профіль ({formatSeconds(fullProfile.ai.cache_age_sec)} тому), щоб зменшити rate limit.
+                  <button
+                    onClick={() => handleLoadFullProfile(true)}
+                    disabled={fullProfileLoading || (fullProfile?.ai?.cooldown_remaining_sec || 0) > 0}
+                    className="bg-[#0f766e] hover:bg-[#115e59] disabled:bg-slate-300 text-white px-6 py-3.5 rounded-2xl font-black transition-colors shadow-md"
+                  >
+                    {fullProfileLoading
+                      ? 'Оновлення профілю...'
+                      : (fullProfile?.ai?.cooldown_remaining_sec || 0) > 0
+                        ? `Повтор через ${formatSeconds(fullProfile.ai.cooldown_remaining_sec)}`
+                        : 'Перегенерувати'}
+                  </button>
                 </div>
-              )}
 
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-5">
-                <div>
-                  <div className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-teal-200 inline-block mb-3">Психологічний meta-profile</div>
-                  <h3 className="text-3xl font-black text-slate-900">Повний профіль клієнта</h3>
-                  <p className="text-slate-500 font-medium mt-2">Агрегований AI-аналіз на основі всіх пройдених методик.</p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {fullProfile?.ai?.source === 'local-fallback' && (
+                    <span className="px-3 py-1.5 rounded-full text-xs font-black border border-amber-300 bg-amber-100 text-amber-900">
+                      Локальний fallback
+                    </span>
+                  )}
+                  {fullProfile?.ai?.cached && (
+                    <span className="px-3 py-1.5 rounded-full text-xs font-black border border-slate-300 bg-white text-slate-700">
+                      Кеш: {formatSeconds(fullProfile.ai.cache_age_sec)} тому
+                    </span>
+                  )}
+                  {fullProfile?.ai?.source === 'external-ai' && (
+                    <span className="px-3 py-1.5 rounded-full text-xs font-black border border-emerald-300 bg-emerald-100 text-emerald-900">
+                      Зовнішній AI активний
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => handleLoadFullProfile(true)}
-                  disabled={fullProfileLoading || (fullProfile?.ai?.cooldown_remaining_sec || 0) > 0}
-                  className="bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 text-white px-5 py-3 rounded-xl font-black transition-colors"
-                >
-                  {fullProfileLoading
-                    ? 'Оновлення...'
-                    : (fullProfile?.ai?.cooldown_remaining_sec || 0) > 0
-                      ? `Повтор через ${formatSeconds(fullProfile.ai.cooldown_remaining_sec)}`
-                      : 'Перегенерувати профіль'}
-                </button>
               </div>
 
               {fullProfileLoading && !fullProfile && (
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-10 text-center text-slate-600 font-medium">
-                  Формується розширений профіль клієнта...
+                <div className="space-y-4">
+                  <div className="h-24 rounded-3xl border border-slate-200 bg-slate-100 animate-pulse" />
+                  <div className="h-40 rounded-3xl border border-slate-200 bg-slate-100 animate-pulse" />
+                  <div className="h-56 rounded-3xl border border-slate-200 bg-slate-100 animate-pulse" />
                 </div>
               )}
 
@@ -427,55 +575,120 @@ export default function PatientProfile() {
 
               {fullProfile && (
                 <>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                      <p className="text-xs uppercase tracking-widest text-slate-400 font-black mb-2">Джерел</p>
-                      <p className="text-3xl font-black text-slate-800">{fullProfile.sources_count || 0}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                      <p className="text-xs uppercase tracking-[0.15em] text-slate-400 font-black mb-2">Методик у профілі</p>
+                      <p className="text-4xl font-black text-slate-900">{fullProfile.sources_count || 0}</p>
+                      <p className="text-slate-500 font-medium mt-1 text-sm">Останній результат по кожній методиці</p>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                      <p className="text-xs uppercase tracking-widest text-slate-400 font-black mb-2">Tononi</p>
-                      <p className="text-3xl font-black text-slate-800">{fullProfile.metrics?.tononi_complexity?.toFixed(3)}</p>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                      <p className="text-xs uppercase tracking-[0.15em] text-slate-400 font-black mb-2">Всього тестів в історії</p>
+                      <p className="text-4xl font-black text-slate-900">{fullProfile.total_results_count || fullProfile.sources_count || 0}</p>
+                      <p className="text-slate-500 font-medium mt-1 text-sm">Повна кількість проходжень клієнта</p>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                      <p className="text-xs uppercase tracking-widest text-slate-400 font-black mb-2">Free Energy</p>
-                      <p className="text-3xl font-black text-slate-800">{fullProfile.metrics?.free_energy?.toFixed(3)}</p>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                      <p className="text-xs uppercase tracking-[0.15em] text-slate-400 font-black mb-2">Tononi Complexity</p>
+                      <p className="text-4xl font-black text-slate-900">{asNumber(fullProfile.metrics?.tononi_complexity).toFixed(3)}</p>
+                      <p className="text-slate-500 font-medium mt-1 text-sm">Індикатор структурної складності</p>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                      <p className="text-xs uppercase tracking-[0.15em] text-slate-400 font-black mb-2">Free Energy</p>
+                      <p className="text-4xl font-black text-slate-900">{asNumber(fullProfile.metrics?.free_energy).toFixed(3)}</p>
+                      <p className="text-slate-500 font-medium mt-1 text-sm">Поточна адаптаційна напруга</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200 rounded-3xl p-6">
-                    <p className="text-xs uppercase tracking-widest text-slate-400 font-black mb-3">Використані методики</p>
+                  <div className="rounded-[2rem] border border-slate-200 bg-white p-6 md:p-8">
+                    <h4 className="text-lg font-black text-slate-900 mb-3">Клінічний висновок</h4>
+                    <p className="text-slate-700 text-lg leading-relaxed font-medium">
+                      {fullProfile.profile?.conclusion || 'Висновок поки недоступний.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                    {renderTraitSection(
+                      'Велика п\'ятірка',
+                      [
+                        { key: 'neuroticism', label: 'Невротизм' },
+                        { key: 'extraversion', label: 'Екстраверсія' },
+                        { key: 'openness', label: 'Відкритість' },
+                        { key: 'agreeableness', label: 'Доброзичливість' },
+                        { key: 'conscientiousness', label: 'Сумлінність' },
+                      ],
+                      fullProfile.profile?.big_five,
+                      'teal'
+                    )}
+
+                    {renderTraitSection(
+                      'Маслоу',
+                      [
+                        { key: 'physiological', label: 'Фізіологічні потреби' },
+                        { key: 'safety', label: 'Безпека' },
+                        { key: 'love', label: 'Любов і приналежність' },
+                        { key: 'esteem', label: 'Повага' },
+                        { key: 'self_actualization', label: 'Самоактуалізація' },
+                      ],
+                      fullProfile.profile?.maslow,
+                      'amber'
+                    )}
+
+                    {renderTraitSection(
+                      'Цінності Шварца',
+                      [
+                        { key: 'power', label: 'Влада' },
+                        { key: 'achievement', label: 'Досягнення' },
+                        { key: 'hedonism', label: 'Гедонізм' },
+                        { key: 'security', label: 'Безпека' },
+                        { key: 'benevolence', label: 'Доброзичливість' },
+                        { key: 'universalism', label: 'Універсалізм' },
+                        { key: 'self_direction', label: 'Самостійність' },
+                        { key: 'stimulation', label: 'Стимуляція' },
+                        { key: 'conformity', label: 'Конформність' },
+                        { key: 'tradition', label: 'Традиції' },
+                      ],
+                      fullProfile.profile?.schwartz,
+                      'slate'
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div className="rounded-[2rem] border border-slate-200 bg-[#f7fffd] p-6">
+                      <h4 className="text-lg font-black text-[#115e59] mb-4">Фокус терапевтичної роботи</h4>
+                      <div className="space-y-3">
+                        {Array.isArray(fullProfile.profile?.therapeutic_focus) && fullProfile.profile.therapeutic_focus.length > 0 ? (
+                          fullProfile.profile.therapeutic_focus.map((item, i) => (
+                            <div key={i} className="text-slate-800 font-medium leading-relaxed">{i + 1}. {item}</div>
+                          ))
+                        ) : (
+                          <p className="text-slate-500 font-medium">Терапевтичний фокус не сформовано.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[2rem] border border-amber-200 bg-amber-50 p-6">
+                      <h4 className="text-lg font-black text-amber-900 mb-4">Рекомендації для психолога</h4>
+                      <div className="space-y-3">
+                        {Array.isArray(fullProfile.profile?.recommendations) && fullProfile.profile.recommendations.length > 0 ? (
+                          fullProfile.profile.recommendations.map((item, i) => (
+                            <div key={i} className="text-amber-900 font-medium leading-relaxed">{i + 1}. {item}</div>
+                          ))
+                        ) : (
+                          <p className="text-amber-900/70 font-medium">Рекомендації поки недоступні.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[2rem] border border-slate-200 bg-white p-6">
+                    <h4 className="text-lg font-black text-slate-900 mb-3">Методики в розрахунку профілю</h4>
                     <div className="flex flex-wrap gap-2">
                       {(fullProfile.source_tests || []).map((testName, i) => (
-                        <span key={`${testName}-${i}`} className="bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1.5 rounded-full text-xs font-bold">
+                        <span key={`${testName}-${i}`} className="px-3 py-2 rounded-full text-xs font-black bg-slate-100 border border-slate-200 text-slate-700">
                           {testName}
                         </span>
                       ))}
                     </div>
                   </div>
-
-                  <ResultsDisplay metrics={fullProfile.metrics || {}} profile={fullProfile.profile || {}} />
-
-                  {Array.isArray(fullProfile.profile?.therapeutic_focus) && fullProfile.profile.therapeutic_focus.length > 0 && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6">
-                      <h4 className="text-lg font-black text-slate-800 mb-4">Фокус терапевтичної роботи</h4>
-                      <div className="space-y-2">
-                        {fullProfile.profile.therapeutic_focus.map((item, i) => (
-                          <div key={i} className="text-slate-700 font-medium">• {item}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {Array.isArray(fullProfile.profile?.recommendations) && fullProfile.profile.recommendations.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6">
-                      <h4 className="text-lg font-black text-amber-900 mb-4">Рекомендації AI для психолога</h4>
-                      <div className="space-y-2">
-                        {fullProfile.profile.recommendations.map((item, i) => (
-                          <div key={i} className="text-amber-900 font-medium">• {item}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>

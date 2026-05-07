@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.ai_analyzer import (
+    analyze_coping_with_gemini,
     analyze_beck_with_gemini,
     analyze_full_profile_with_gemini,
     analyze_interview_with_gemini,
@@ -168,6 +169,27 @@ def _build_ai_meta(source: str, cached: bool, cache_age_sec: int, cooldown_remai
     }
 
 
+def _results_signature(results: list[TestResult]) -> str:
+    if not results:
+        return "empty"
+
+    parts = []
+    for item in results:
+        stamp = int(item.created_at.timestamp()) if item.created_at else 0
+        parts.append(f"{item.id}:{item.test_type}:{stamp}")
+    return "|".join(parts)
+
+
+def _latest_results_per_test(results: list[TestResult]) -> list[TestResult]:
+    latest_by_type = {}
+    for item in results:
+        latest_by_type[item.test_type] = item
+
+    latest_results = list(latest_by_type.values())
+    latest_results.sort(key=lambda item: item.created_at or 0)
+    return latest_results
+
+
 async def analyze_interview(data: InterviewPayload):
     if len(data.text) < 10:
         raise HTTPException(status_code=400, detail="Текст занадто короткий")
@@ -241,6 +263,19 @@ def _coping_recommendations(problem_ratio: float, support_ratio: float, avoidanc
     return recs
 
 
+def _format_coping_answers_for_ai(answers: list[int]) -> str:
+    labels = {
+        0: "не згоден",
+        1: "згоден",
+        2: "повністю згоден",
+    }
+
+    lines = []
+    for idx, answer in enumerate(answers, start=1):
+        lines.append(f"{idx}. {labels.get(answer, 'невідома відповідь')} ({answer})")
+    return "\n".join(lines)
+
+
 async def analyze_coping(answers: list[int]):
     if len(answers) != 33:
         raise HTTPException(status_code=400, detail="Потрібно надати відповіді на всі 33 твердження")
@@ -284,10 +319,27 @@ async def analyze_coping(answers: list[int]):
             "Доцільно відстежувати, які стратегії є найбільш ефективними у конкретних ситуаціях."
         )
 
+    ai_result = analyze_coping_with_gemini(
+        strategy_scores,
+        _format_coping_answers_for_ai(answers),
+    )
+    if isinstance(ai_result, dict):
+        dominant_strategy = ai_result.get("dominant_strategy") or dominant_strategy
+        interpretation = ai_result.get("interpretation") or interpretation
+        recommendations = ai_result.get("recommendations")
+        if isinstance(recommendations, list) and recommendations:
+            recommendations = [str(item).strip() for item in recommendations if str(item).strip()]
+        else:
+            recommendations = _coping_recommendations(problem_ratio, support_ratio, avoidance_ratio)
+        analysis_source = "gemini"
+    else:
+        recommendations = _coping_recommendations(problem_ratio, support_ratio, avoidance_ratio)
+        analysis_source = "rule-based"
+
     return {
         "status": "success",
         "data": {
-            "analysis_source": "rule-based",
+            "analysis_source": analysis_source,
             "scores": strategy_scores,
             "levels": {
                 "problem_solving": _level_from_ratio(problem_ratio),
@@ -296,7 +348,7 @@ async def analyze_coping(answers: list[int]):
             },
             "dominant_strategy": dominant_strategy,
             "interpretation": interpretation,
-            "recommendations": _coping_recommendations(problem_ratio, support_ratio, avoidance_ratio),
+            "recommendations": recommendations,
         },
     }
 
@@ -338,10 +390,29 @@ def get_test_results(user_id: int, db: Session):
 def build_full_profile(user_id: int, db: Session, force_refresh: bool = False):
     now = time.time()
     cached_entry = _FULL_PROFILE_CACHE.get(user_id)
+
+    all_results = (
+        db.query(TestResult)
+        .filter(TestResult.user_id == user_id)
+        .order_by(TestResult.created_at.asc())
+        .all()
+    )
+
+    if not all_results:
+        raise HTTPException(status_code=404, detail="Немає даних для формування профілю")
+
+    results_signature = _results_signature(all_results)
+
     if cached_entry:
         age = int(now - cached_entry["ts"])
         base_data = dict(cached_entry["data"])
         source = cached_entry["source"]
+        cached_signature = cached_entry.get("signature")
+
+        # Якщо дані не змінювались, повертаємо кешований профіль без повторного AI-виклику.
+        if not force_refresh and cached_signature == results_signature:
+            base_data["ai"] = _build_ai_meta(source, cached=True, cache_age_sec=age)
+            return {"status": "success", "data": base_data}
 
         if not force_refresh and age < FULL_PROFILE_CACHE_TTL_SEC:
             base_data["ai"] = _build_ai_meta(source, cached=True, cache_age_sec=age)
@@ -357,15 +428,7 @@ def build_full_profile(user_id: int, db: Session, force_refresh: bool = False):
             )
             return {"status": "success", "data": base_data}
 
-    results = (
-        db.query(TestResult)
-        .filter(TestResult.user_id == user_id)
-        .order_by(TestResult.created_at.asc())
-        .all()
-    )
-
-    if not results:
-        raise HTTPException(status_code=404, detail="Немає даних для формування профілю")
+    results = _latest_results_per_test(all_results)
 
     context_chunks = []
     for result in results:
@@ -402,12 +465,14 @@ def build_full_profile(user_id: int, db: Session, force_refresh: bool = False):
             "free_energy": free_energy(b5),
         },
         "sources_count": len(results),
+        "total_results_count": len(all_results),
         "source_tests": [r.test_type for r in results],
     }
 
     _FULL_PROFILE_CACHE[user_id] = {
         "ts": now,
         "source": source,
+        "signature": results_signature,
         "data": response_data,
     }
 

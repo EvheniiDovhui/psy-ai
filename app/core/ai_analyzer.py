@@ -460,3 +460,51 @@ def analyze_beck_with_gemini(total_score: int, answers_text: str):
         if AI_VERBOSE_LOGS:
             print(f"BECK AI fallback: {_short_error_message(e)}")
         return _fallback_beck_analysis(total_score)
+
+
+def analyze_coping_with_gemini(scores: dict, answers_text: str):
+    """ШІ-аналіз індикатора копінг-стратегій."""
+    prompt = f"""
+    Ти — досвідчений клінічний психолог. Проаналізуй результати індикатора копінг-стратегій.
+
+    КОНТЕКСТ:
+    - Усього 33 твердження.
+    - Оцінювання: 0 = не згоден, 1 = згоден, 2 = повністю згоден.
+    - Потрібно дати зрозумілу, професійну, але живу інтерпретацію без діагнозу.
+    - Не повторюй технічні формулювання, якщо вони вже є в балі.
+
+    ВЖЕ ПОРАХОВАНІ БАЛИ:
+    - problem_solving: {scores.get("problem_solving", 0)} з 22
+    - social_support: {scores.get("social_support", 0)} з 22
+    - avoidance: {scores.get("avoidance", 0)} з 22
+
+    ОПИС ВІДПОВІДЕЙ КЛІЄНТА:
+    {answers_text}
+
+    ЗАВДАННЯ:
+    1. Визнач домінуючу стратегію подолання стресу.
+    2. Дай цілісну інтерпретацію профілю в 3-5 реченнях.
+    3. Дай 3-5 конкретних, практичних і делікатних рекомендацій.
+    4. Збережи тон підтримувальним, професійним і зрозумілим для клієнта.
+
+    ПОВЕРНИ ЛИШЕ JSON БЕЗ markdown і без додаткового тексту:
+    {{
+      "dominant_strategy": "Стратегія вирішення проблем / Стратегія пошуку соціальної підтримки / Стратегія уникнення / Комбінований копінг-профіль",
+      "interpretation": "Коротка, але змістовна інтерпретація профілю",
+      "recommendations": ["Рекомендація 1", "Рекомендація 2", "Рекомендація 3"]
+    }}
+    """
+
+    if not client:
+        return None
+
+    try:
+        response = _generate_content_with_model_fallback(prompt)
+        if not response:
+            return None
+        parsed = clean_ai_json(response.text)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception as e:
+        if AI_VERBOSE_LOGS:
+            print(f"COPING AI fallback: {_short_error_message(e)}")
+        return None

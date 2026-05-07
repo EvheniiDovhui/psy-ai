@@ -20,25 +20,33 @@ export default function PatientDashboard() {
   const navigate = useNavigate();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [assignedPsy, setAssignedPsy] = useState(null);
+  const [assignedPsychologistsCount, setAssignedPsychologistsCount] = useState(0);
 
   useEffect(() => {
     const email = localStorage.getItem('userEmail');
     if (!email) return;
 
-    fetch(`${API_BASE_URL}/api/my-psychologist/${encodeURIComponent(email)}`)
+    fetch(`${API_BASE_URL}/api/my-psychologists/${encodeURIComponent(email)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.status === 'success') {
-          const psyId = data.psychologist_id;
+        const list = Array.isArray(data.data) ? data.data : [];
+        if (data.status === 'success' && list.length) {
+          setAssignedPsychologistsCount(list.length);
+
+          const preferredId = Number(localStorage.getItem('assignedPsyId') || 0);
+          const selected = list.find((item) => item.psychologist_id === preferredId) || list[0];
+          const psyId = selected.psychologist_id;
+
           setAssignedPsy({
             id: psyId,
-            name: data.psychologist_name,
+            name: selected.psychologist_name,
             role: 'Психолог',
             color: ['indigo', 'emerald', 'rose', 'amber', 'teal'][psyId % 5],
           });
           localStorage.setItem('assignedPsyId', String(psyId));
         } else {
           setAssignedPsy(null);
+          setAssignedPsychologistsCount(0);
           localStorage.removeItem('assignedPsyId');
         }
       })
@@ -121,6 +129,9 @@ export default function PatientDashboard() {
                   <div>
                     <h4 className="text-xl font-bold text-slate-900 leading-tight">{assignedPsy.name}</h4>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{assignedPsy.role}</p>
+                    {assignedPsychologistsCount > 1 && (
+                      <p className="text-xs font-bold text-slate-500 mt-1">Призначено фахівців: {assignedPsychologistsCount}</p>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => navigate('/chat')} className="w-full mt-2 bg-teal-700 hover:bg-teal-800 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-teal-900/20">

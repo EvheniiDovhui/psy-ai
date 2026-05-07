@@ -8,6 +8,7 @@ import {
   FaShieldAlt,
 } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 const OPTIONS = [
   { label: 'а) повністю згоден', value: 2 },
@@ -53,6 +54,7 @@ const COPING_QUESTIONS = [
 
 export default function CopingStrategiesTest() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
@@ -70,7 +72,11 @@ export default function CopingStrategiesTest() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (Object.keys(answers).length !== COPING_QUESTIONS.length) {
-      alert('Будь ласка, дайте відповідь на всі твердження.');
+      openModal({
+        tone: 'info',
+        title: 'Потрібно завершити тест',
+        message: 'Будь ласка, дайте відповідь на всі твердження.',
+      });
       return;
     }
 
@@ -126,7 +132,11 @@ export default function CopingStrategiesTest() {
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
     } catch (error) {
       console.error(error);
-      alert(error.message || 'Не вдалося виконати аналіз тесту.');
+      openModal({
+        tone: 'error',
+        title: 'Помилка аналізу',
+        message: error.message || 'Не вдалося виконати аналіз тесту.',
+      });
     } finally {
       setLoading(false);
     }

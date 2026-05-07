@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCheckCircle, FaLock, FaSpinner, FaMagic, FaListOl } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 const BECK_QUESTIONS = [
   { id: 1, options: ["Я не відчуваю смутку.", "Я засмучений.", "Я весь час засмучений і не можу від цього звільнитися.", "Я настільки засмучений і нещасливий, що не можу це витримати."] },
@@ -30,6 +31,7 @@ const BECK_QUESTIONS = [
 
 export default function BeckTest() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const isDevMode = import.meta.env.DEV;
   const [loading, setLoading] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
@@ -56,7 +58,11 @@ export default function BeckTest() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (Object.keys(answers).length < BECK_QUESTIONS.length) {
-      alert("Будь ласка, дайте відповідь на всі запитання.");
+      openModal({
+        tone: 'info',
+        title: 'Потрібно завершити тест',
+        message: 'Будь ласка, дайте відповідь на всі запитання.',
+      });
       return;
     }
     
@@ -162,7 +168,11 @@ export default function BeckTest() {
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
     } catch (error) {
       console.error(error);
-      alert('Не вдалося отримати аналіз AI.');
+      openModal({
+        tone: 'error',
+        title: 'Помилка аналізу',
+        message: 'Не вдалося отримати аналіз AI.',
+      });
     } finally {
       setLoading(false);
     }

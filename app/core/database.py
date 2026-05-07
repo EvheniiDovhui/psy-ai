@@ -1,5 +1,5 @@
 # app/core/database.py
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 
@@ -19,8 +19,22 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String, default="patient")
+    # Legacy one-to-many link. Kept for backward compatibility.
     psychologist_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     results = relationship("TestResult", back_populates="owner")
+
+
+class UserPsychologistLink(Base):
+    __tablename__ = "user_psychologist_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    psychologist_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("patient_id", "psychologist_id", name="uq_patient_psychologist"),
+    )
 
 class TestResult(Base):
     __tablename__ = "test_results"

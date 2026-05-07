@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaUserMd, FaStar, FaRegEnvelope, FaCheckCircle } from 'react-icons/fa';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 const PALETTE = ['indigo', 'emerald', 'rose', 'amber', 'teal'];
 const COLOR_VARIANTS = {
@@ -45,20 +46,26 @@ const COLOR_VARIANTS = {
 
 export default function Specialists() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const isAuthenticated = !!localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
   const userEmail = localStorage.getItem('userEmail');
   const [specialists, setSpecialists] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Перевіряємо, чи вже є обраний лікар
-  const currentPsyId = Number(localStorage.getItem('assignedPsyId') || 0);
+  const [assignedPsychologistIds, setAssignedPsychologistIds] = useState([]);
+
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/psychologists`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === 'success' && Array.isArray(data.data)) {
-          const normalized = data.data.map((specialist, index) => ({
+    const loadData = async () => {
+      try {
+        const [psyRes, assignedRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/psychologists`),
+          userEmail ? fetch(`${API_BASE_URL}/api/my-psychologists/${encodeURIComponent(userEmail)}`) : Promise.resolve(null),
+        ]);
+
+        const psyData = await psyRes.json();
+        if (psyData.status === 'success' && Array.isArray(psyData.data)) {
+          const normalized = psyData.data.map((specialist, index) => ({
             ...specialist,
             role: specialist.role || 'Психолог',
             exp: specialist.exp || 'Досвід вказано у профілі',
@@ -67,24 +74,56 @@ export default function Specialists() {
           }));
           setSpecialists(normalized);
         }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setIsLoading(false));
-  }, []);
+
+        if (assignedRes) {
+          const assignedData = await assignedRes.json();
+          const ids = Array.isArray(assignedData.data)
+            ? assignedData.data.map((item) => item.psychologist_id)
+            : [];
+          setAssignedPsychologistIds(ids);
+
+          const preferredId = Number(localStorage.getItem('assignedPsyId') || 0);
+          if (!preferredId && ids.length) {
+            localStorage.setItem('assignedPsyId', String(ids[0]));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [userEmail]);
 
   const handleAssign = async (specialist) => {
     if (!isAuthenticated) {
-      alert("Будь ласка, увійдіть або зареєструйтесь, щоб обрати фахівця.");
-      navigate('/auth');
+      openModal({
+        tone: 'info',
+        title: 'Потрібна авторизація',
+        message: 'Будь ласка, увійдіть або зареєструйтесь, щоб обрати фахівця.',
+        confirmText: 'Увійти',
+        onConfirm: () => navigate('/auth'),
+      });
       return;
     }
     if (userRole === 'psychologist') {
-      alert("Ви авторизовані як фахівець. Ця функція для клієнтів.");
+      openModal({
+        tone: 'error',
+        title: 'Обмеження ролі',
+        message: 'Ви авторизовані як фахівець. Ця функція доступна лише для клієнтів.',
+      });
       return;
     }
     if (!userEmail) {
-      alert('Не знайдено email користувача. Увійдіть повторно.');
-      navigate('/auth');
+      openModal({
+        tone: 'error',
+        title: 'Сесію втрачено',
+        message: 'Не знайдено email користувача. Увійдіть повторно.',
+        confirmText: 'Перейти до входу',
+        onConfirm: () => navigate('/auth'),
+      });
       return;
     }
 
@@ -104,10 +143,15 @@ export default function Specialists() {
       }
 
       localStorage.setItem('assignedPsyId', String(specialist.id));
+      setAssignedPsychologistIds((prev) => (prev.includes(specialist.id) ? prev : [...prev, specialist.id]));
       navigate('/dashboard');
     } catch (error) {
       console.error(error);
-      alert(error.message || 'Помилка призначення фахівця');
+      openModal({
+        tone: 'error',
+        title: 'Не вдалося закріпити фахівця',
+        message: error.message || 'Помилка призначення фахівця',
+      });
     }
   };
 
@@ -128,7 +172,7 @@ export default function Specialists() {
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {specialists.map(s => {
-          const isAssigned = currentPsyId === s.id;
+          const isAssigned = assignedPsychologistIds.includes(s.id);
           const variant = COLOR_VARIANTS[s.color] || COLOR_VARIANTS.teal;
           
           return (

@@ -7,6 +7,7 @@ from app.services.user_service import (
     assign_psychologist,
     get_my_patients,
     get_my_psychologist,
+    get_my_psychologists,
     get_psychologists,
     get_user_info,
 )
@@ -32,6 +33,11 @@ def assign(req: AssignPsychologistRequest, db: Session = Depends(get_db)):
 @router.get("/my-psychologist/{email}")
 def my_psychologist(email: str, db: Session = Depends(get_db)):
     return get_my_psychologist(email, db)
+
+
+@router.get("/my-psychologists/{email}")
+def my_psychologists(email: str, db: Session = Depends(get_db)):
+    return get_my_psychologists(email, db)
 
 
 @router.get("/my-patients/{email}")

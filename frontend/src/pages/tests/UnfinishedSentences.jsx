@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPaperPlane, FaSpinner, FaMagic, FaLock } from 'react-icons/fa';
 import { SACHS_PROMPTS, SACHS_KEYS } from '../../lib/data/sachsLevy';
 import { API_BASE_URL } from '../../lib/config/api';
+import { useModal } from '../../lib/modal/ModalContext';
 
 export default function UnfinishedSentences() {
   const navigate = useNavigate();
+  const { openModal } = useModal();
   const isDevMode = import.meta.env.DEV;
   const [answers, setAnswers] = useState(Array(SACHS_PROMPTS.length).fill(''));
   const [isLoading, setIsLoading] = useState(false);
@@ -84,9 +86,17 @@ export default function UnfinishedSentences() {
       
       // Розумна перевірка помилок
       if (error.message.includes('503') || error.message.includes('сервера')) {
-        alert('Сервери штучного інтелекту зараз перевантажені через високий попит. Будь ласка, зачекайте хвилинку і спробуйте надіслати результати ще раз. Ваші дані збережені на екрані.');
+        openModal({
+          tone: 'error',
+          title: 'Сервери перевантажені',
+          message: 'Сервери штучного інтелекту зараз перевантажені через високий попит. Будь ласка, зачекайте хвилинку і спробуйте надіслати результати ще раз. Ваші дані збережені на екрані.',
+        });
       } else {
-        alert('Не вдалося з\'єднатися з сервером. Перевірте підключення до інтернету.');
+        openModal({
+          tone: 'error',
+          title: 'Проблема з підключенням',
+          message: 'Не вдалося з\'єднатися з сервером. Перевірте підключення до інтернету.',
+        });
       }
     } finally {
       setIsLoading(false); // Виправлено з setLoading на setIsLoading!
